@@ -22,7 +22,6 @@ const data = {
         {
           title: 'Overview',
           url: '#',
-          isActive: true,
         },
         {
           title: 'Classification',
@@ -45,7 +44,12 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ 
+  activeItem = 'Overview',
+  ...props 
+}: React.ComponentProps<typeof Sidebar> & { 
+  activeItem?: string 
+}) {
   return (
     <Sidebar {...props}>
       <SidebarHeader>
@@ -59,7 +63,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenu>
                 {item.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={item.isActive}>
+                    <SidebarMenuButton asChild isActive={item.title === activeItem}>
                       <a href={item.url}>{item.title}</a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
