@@ -41,7 +41,30 @@ export default function Page() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://127.0.0.1:5000/api/getOverview');
+        // Try to fetch formData from localStorage
+        const storedFormData = localStorage.getItem('formData');
+        let formData = null;
+
+        if (storedFormData) {
+          try {
+            formData = JSON.parse(storedFormData);
+            console.log('Retrieved form data from localStorage:', formData);
+          } catch (err) {
+            console.error('Failed to parse form data from localStorage:', err);
+          }
+        }
+
+        // const response = await fetch('http://127.0.0.1:5000/api/getOverview');
+        // send the file to the backend
+        // const response = await fetch('/api/upload', {
+      //   method: 'POST',
+      //   body: formData,
+      // });
+        
+       const response = await fetch('http://localhost:5000/api/getOverview', {
+          method: 'GET',
+          body: formData,
+        });
 
         if (!response.ok) {
           throw new Error(`API Error: ${response.status}`);
