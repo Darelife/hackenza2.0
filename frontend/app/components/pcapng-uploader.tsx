@@ -10,6 +10,7 @@ export default function PcapngUploader() {
   const [file, setFile] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -57,6 +58,42 @@ export default function PcapngUploader() {
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleSubmit = async () => {
+    if (!file || !fileInputRef.current?.files?.[0]) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', fileInputRef.current.files[0]);
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      // save the response as a cookie
+      const data = await response.json();
+      document.cookie = `data=${JSON.stringify(data)}`;
+
+      // redirect to the results page
+      window.location.href = '/overview';
+      
+      // Handle successful upload
+      console.log('File uploaded successfully');
+      // You can add additional handling here
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload file');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -132,9 +169,18 @@ export default function PcapngUploader() {
             <Button variant='outline' onClick={triggerFileInput}>
               Change File
             </Button>
-            <Button variant='destructive' onClick={() => setFile(null)}>
-              Remove
-            </Button>
+            <div className='flex gap-2'>
+              <Button variant='destructive' onClick={() => setFile(null)}>
+                Remove
+              </Button>
+              <Button 
+                onClick={handleSubmit} 
+                disabled={isSubmitting}
+                className='bg-blue-600 hover:bg-blue-700 text-white'
+              >
+                {isSubmitting ? 'Uploading...' : 'Upload File'}
+              </Button>
+            </div>
           </div>
         </div>
       )}
