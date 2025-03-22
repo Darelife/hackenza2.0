@@ -170,15 +170,15 @@ export default function PcapngUploader() {
               Change File
             </Button>
             <div className='flex gap-2'>
-              <Button variant='destructive' onClick={() => setFile(null)}>
+                <Button variant='destructive' onClick={() => setFile(null)} className="hover:bg-red-700">
                 Remove
-              </Button>
+                </Button>
               <Button 
                 onClick={handleSubmit} 
                 disabled={isSubmitting}
                 className='bg-blue-600 hover:bg-blue-700 text-white'
               >
-                {isSubmitting ? 'Uploading...' : 'Upload File'}
+                {isSubmitting ? 'Uploading...' : 'Confirm'}
               </Button>
             </div>
           </div>
