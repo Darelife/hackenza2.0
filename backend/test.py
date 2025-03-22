@@ -16,6 +16,19 @@ class PacketAnalyzer:
         self.retransmissions = []
         self.jitter_values = defaultdict(list)
         self.tcp_flows = defaultdict(list)
+        self.delay_categories = {
+            'bundling_delays': [],
+            'broker_processing_delays': [],
+            'retransmission_delays': [],
+            'network_delays': []
+        }
+        self.packet_loss_stats = {
+            'total_expected': 0,
+            'total_received': 0,
+            'lost_packets': defaultdict(list),
+            'loss_timestamps': defaultdict(list),
+            'protocol_stats': defaultdict(lambda: {'lost': 0, 'transmitted': 0})
+        }
         
     def basic_statistics(self):
         """Calculate basic packet statistics"""
@@ -39,13 +52,20 @@ class PacketAnalyzer:
         return stats
 
     def analyze_delays(self):
-        """Analyze various types of delays"""
+        """Analyze various types of delays and packet loss"""
+        print("\nAnalyzing TCP sequence numbers for packet loss...")
+        seq_debug_count = 0
+        flow_seq_tracking = {}
+        
         for i in range(len(self.packets)-1):
             pkt = self.packets[i]
             next_pkt = self.packets[i+1]
             
             # Determine protocol
             proto = self._get_protocol(pkt)
+            
+            # Update transmitted count for protocol
+            self.packet_loss_stats['protocol_stats'][proto]['transmitted'] += 1
             
             # Calculate basic latency
             latency = (float(next_pkt.time) - float(pkt.time)) * 1000
@@ -58,19 +78,90 @@ class PacketAnalyzer:
                 jitter = abs(latency - self.latencies[proto][-2])
                 self.jitter_values[proto].append(jitter)
             
-            # Analyze TCP flows and retransmissions - only if packet has both IP and TCP layers
-            if IP in pkt and TCP in pkt:
-                flow = (pkt[IP].src, pkt[IP].dst, pkt[TCP].sport, pkt[TCP].dport)
-                self.tcp_flows[flow].append((float(pkt.time), pkt[TCP].seq))
+            # Only process IP packets for delay categories
+            if IP in pkt and IP in next_pkt:
+                # Classify delays
+                delay = float(next_pkt.time) - float(pkt.time)
                 
-                # Check for retransmissions
-                if len(self.tcp_flows[flow]) > 1:
-                    if pkt[TCP].seq == self.tcp_flows[flow][-2][1]:
-                        self.retransmissions.append({
+                # Classify based on delay characteristics
+                if delay > 0.1:  # More than 100ms
+                    self.delay_categories['broker_processing_delays'].append({
+                        'time': float(pkt.time),
+                        'delay': delay * 1000,  # Convert to ms
+                        'src': pkt[IP].src,
+                        'dst': pkt[IP].dst
+                    })
+                
+                # Only process TCP packets for bundling and packet loss analysis
+                if TCP in pkt and TCP in next_pkt:
+                    flow = (pkt[IP].src, pkt[TCP].sport, pkt[IP].dst, pkt[TCP].dport)
+                    self.tcp_flows[flow].append((float(pkt.time), pkt[TCP].seq))
+                    
+                    # Check for retransmissions
+                    if len(self.tcp_flows[flow]) > 1:
+                        if pkt[TCP].seq == self.tcp_flows[flow][-2][1]:
+                            self.retransmissions.append({
+                                'time': float(pkt.time),
+                                'flow': flow,
+                                'seq': pkt[TCP].seq
+                            })
+                    
+                    # Check for bundling
+                    if delay < 0.001:  # Less than 1ms
+                        self.delay_categories['bundling_delays'].append({
                             'time': float(pkt.time),
-                            'flow': flow,
-                            'seq': pkt[TCP].seq
+                            'delay': delay * 1000
                         })
+                    
+                    # Analyze sequence numbers for packet loss - Updated logic
+                    current_seq = pkt[TCP].seq
+                    next_seq = next_pkt[TCP].seq
+                    payload_len = len(pkt[TCP].payload)
+                    
+                    # Initialize flow tracking if new flow
+                    if flow not in flow_seq_tracking:
+                        flow_seq_tracking[flow] = {'last_seq': current_seq, 'last_ack': pkt[TCP].ack}
+                    
+                    # Debug output (limit to first 10 pairs to avoid spam)
+                    if seq_debug_count < 10:
+                        print(f"\nPacket pair {seq_debug_count}:")
+                        print(f"  Flow: {flow}")
+                        print(f"  Current packet: seq={current_seq}, ack={pkt[TCP].ack}, payload_len={payload_len}")
+                        print(f"  Next packet: seq={next_seq}, ack={next_pkt[TCP].ack}")
+                        if payload_len > 0:
+                            expected_seq = (current_seq + payload_len) & 0xFFFFFFFF
+                            print(f"  Expected next seq: {expected_seq}")
+                        print(f"  TCP flags: {pkt[TCP].flags}")
+                        seq_debug_count += 1
+                    
+                    # Check for sequence number discontinuity
+                    last_seq = flow_seq_tracking[flow]['last_seq']
+                    if payload_len > 0:
+                        expected_seq = (last_seq + payload_len) & 0xFFFFFFFF
+                        
+                        # Check if next sequence number is unexpected
+                        if current_seq != expected_seq:
+                            # Ignore if it's a retransmission
+                            if current_seq != last_seq:
+                                missing_bytes = (current_seq - expected_seq) & 0xFFFFFFFF
+                                if 0 < missing_bytes < 10000:  # Reasonable threshold
+                                    print(f"\nPotential loss detected in flow {flow} (Protocol: {proto}):")
+                                    print(f"  Expected seq: {expected_seq}")
+                                    print(f"  Actual seq: {current_seq}")
+                                    print(f"  Missing bytes: {missing_bytes}")
+                                    
+                                    self.packet_loss_stats['lost_packets'][proto].append({
+                                        'time': float(pkt.time),
+                                        'flow': flow,
+                                        'missing_seq': range(expected_seq, current_seq),
+                                        'bytes_lost': missing_bytes
+                                    })
+                                    self.packet_loss_stats['loss_timestamps'][proto].append(float(pkt.time))
+                                    self.packet_loss_stats['protocol_stats'][proto]['lost'] += 1
+                    
+                    # Update flow tracking
+                    flow_seq_tracking[flow]['last_seq'] = (current_seq + payload_len) & 0xFFFFFFFF
+                    flow_seq_tracking[flow]['last_ack'] = pkt[TCP].ack
 
     def _get_protocol(self, pkt):
         """Determine packet protocol with expanded protocol detection"""
@@ -144,6 +235,48 @@ class PacketAnalyzer:
         
         return 'Other'
 
+    def calculate_packet_loss(self):
+        """Calculate protocol-wise packet loss statistics"""
+        results = {
+            'overall': {
+                'total_lost_packets': 0,
+                'total_transmitted': len(self.packets),
+                'loss_percentage': 0.0,
+                'loss_events': 0
+            },
+            'per_protocol': {}
+        }
+        
+        # Calculate per-protocol statistics
+        for proto in self.packet_loss_stats['protocol_stats']:
+            stats = self.packet_loss_stats['protocol_stats'][proto]
+            lost = stats['lost']
+            transmitted = stats['transmitted']
+            
+            if transmitted > 0:
+                loss_percentage = (lost / (transmitted + lost)) * 100
+            else:
+                loss_percentage = 0.0
+                
+            results['per_protocol'][proto] = {
+                'lost_packets': lost,
+                'transmitted': transmitted,
+                'loss_percentage': loss_percentage,
+                'loss_events': len(self.packet_loss_stats['lost_packets'][proto])
+            }
+            
+            # Update overall statistics
+            results['overall']['total_lost_packets'] += lost
+            results['overall']['loss_events'] += len(self.packet_loss_stats['lost_packets'][proto])
+        
+        # Calculate overall loss percentage
+        total_lost = results['overall']['total_lost_packets']
+        total_transmitted = results['overall']['total_transmitted']
+        if total_transmitted > 0:
+            results['overall']['loss_percentage'] = (total_lost / (total_transmitted + total_lost)) * 100
+        
+        return results
+
     def generate_reports(self):
         """Generate comprehensive analysis reports"""
         # Create output directory
@@ -160,7 +293,10 @@ class PacketAnalyzer:
         # 3. Packet Size Analysis
         self._plot_packet_size_distribution(output_dir)
         
-        # 4. Generate text report
+        # 4. Delay Categories Analysis
+        self._plot_delay_categories(output_dir)
+        
+        # 5. Generate text report
         self._generate_text_report(output_dir)
 
     def _plot_latency_distribution(self, output_dir):
@@ -208,6 +344,58 @@ class PacketAnalyzer:
         plt.title('Packet Size Distribution by Protocol')
         plt.legend()
         plt.savefig(f'{output_dir}/packet_size_distribution.png')
+        plt.close()
+
+    def _plot_delay_categories(self, output_dir):
+        """Plot delay categories distribution"""
+        plt.figure(figsize=(15, 8))
+        
+        # Create subplots for different delay categories
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10))
+        
+        # Plot delay distributions
+        colors = ['blue', 'green', 'red', 'orange']
+        categories = ['bundling_delays', 'broker_processing_delays', 
+                     'retransmission_delays', 'network_delays']
+        
+        for cat, color in zip(categories, colors):
+            delays = [d['delay'] for d in self.delay_categories[cat]]
+            if delays:
+                sns.kdeplot(data=delays, ax=ax1, label=cat.replace('_', ' ').title(), color=color)
+        
+        ax1.set_xlabel('Delay (ms)')
+        ax1.set_ylabel('Density')
+        ax1.set_title('Delay Categories Distribution')
+        ax1.legend()
+        
+        # Plot delay timeline
+        for cat, color in zip(categories, colors):
+            delays = self.delay_categories[cat]
+            if delays:
+                times = [d['time'] for d in delays]
+                values = [d['delay'] for d in delays]
+                ax2.scatter(times, values, label=cat.replace('_', ' ').title(), 
+                          color=color, alpha=0.6, s=30)
+        
+        # Add packet loss indicators if available - FIXED VERSION
+        if self.packet_loss_stats['loss_timestamps']:
+            # Flatten all timestamps from all protocols into a single list
+            all_timestamps = []
+            for proto_timestamps in self.packet_loss_stats['loss_timestamps'].values():
+                all_timestamps.extend(proto_timestamps)
+            
+            if all_timestamps:  # Only plot if we have timestamps
+                ax2.vlines(all_timestamps,
+                          ax2.get_ylim()[0], ax2.get_ylim()[1],
+                          colors='red', linestyles='dashed', label='Packet Loss Events')
+        
+        ax2.set_xlabel('Time (seconds)')
+        ax2.set_ylabel('Delay (ms)')
+        ax2.set_title('Delay Categories Timeline')
+        ax2.legend()
+        
+        plt.tight_layout()
+        plt.savefig(f'{output_dir}/delay_categories_analysis.png')
         plt.close()
 
     def _generate_text_report(self, output_dir):
@@ -308,6 +496,35 @@ class PacketAnalyzer:
             total_bytes = sum(len(pkt) for pkt in self.packets)
             bandwidth = (total_bytes * 8) / (duration * 1000000)  # Mbps
             f.write(f"\nAverage Network Load: {bandwidth:.2f} Mbps\n")
+            
+            # Add delay category analysis
+            f.write("\n=== Delay Category Analysis ===\n")
+            for category, delays in self.delay_categories.items():
+                if delays:
+                    avg_delay = np.mean([d['delay'] for d in delays])
+                    max_delay = max([d['delay'] for d in delays])
+                    f.write(f"\n{category.replace('_', ' ').title()}:\n")
+                    f.write(f"  Count: {len(delays)}\n")
+                    f.write(f"  Average Delay: {avg_delay:.2f} ms\n")
+                    f.write(f"  Maximum Delay: {max_delay:.2f} ms\n")
+            
+            # Add protocol-wise packet loss statistics
+            loss_stats = self.calculate_packet_loss()
+            f.write("\n=== Packet Loss Analysis ===\n")
+            f.write("\nOverall Statistics:\n")
+            f.write(f"Total Lost Packets: {loss_stats['overall']['total_lost_packets']}\n")
+            f.write(f"Total Transmitted: {loss_stats['overall']['total_transmitted']}\n")
+            f.write(f"Overall Loss Percentage: {loss_stats['overall']['loss_percentage']:.2f}%\n")
+            f.write(f"Total Loss Events: {loss_stats['overall']['loss_events']}\n")
+            
+            f.write("\nPer-Protocol Statistics:\n")
+            for proto, stats in loss_stats['per_protocol'].items():
+                if stats['transmitted'] > 0:  # Only show protocols with traffic
+                    f.write(f"\n{proto}:\n")
+                    f.write(f"  Lost Packets: {stats['lost_packets']}\n")
+                    f.write(f"  Transmitted: {stats['transmitted']}\n")
+                    f.write(f"  Loss Percentage: {stats['loss_percentage']:.2f}%\n")
+                    f.write(f"  Loss Events: {stats['loss_events']}\n")
 
     def get_capture_overview(self):
         """Generate a comprehensive overview of the capture file"""
@@ -416,7 +633,7 @@ class PacketAnalyzer:
             print(f"  Port {port:<6} : {count:>6} packets ({percentage:>6.2f}%)")
 
 def main():
-    pcap_file = "/home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-laptp-40ms.pcapng"  # Replace with your pcap file
+    pcap_file = "/home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-rpi-30ms.pcapng"  # Replace with your pcap file
     
     print(f"Analyzing {pcap_file}...")
     analyzer = PacketAnalyzer(pcap_file)
