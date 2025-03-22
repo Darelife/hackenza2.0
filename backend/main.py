@@ -27,7 +27,8 @@ def index():
 
 @app.route("/api/getOverview", methods=["GET"])
 def get_overview():
-    pa = PacketAnalyzer()
+    pcap_file = "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng" 
+    pa = PacketAnalyzer(pcap_file)
     stats = pa.basic_statistics()
     total_packets = stats['total_packets']
 
