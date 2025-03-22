@@ -2,231 +2,207 @@
 === PCAP ANALYSIS DETAILED REPORT ===
 =====================================
 
-File: /home/soham/Documents/hackenza2.0/backend/pcapngFiles/Messy/20_11_24_bro_laptop_30ms_2min.pcapng
-Total Packets: 8767
+File: /home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-laptp-20ms.pcapng
+Total Packets: 9312
 
-Capture Duration: 166.05 seconds
-Start Time: 2024-11-20 12:50:32.298911
-End Time: 2024-11-20 12:53:18.351752
+Capture Duration: 146.63 seconds
+Start Time: 2025-01-28 22:22:11.345350
+End Time: 2025-01-28 22:24:37.975005
 
 === Protocol Distribution ===
-MQTT       :   8524 packets ( 97.23%)
-HTTPS      :    141 packets (  1.61%)
-IPv6       :     59 packets (  0.67%)
-DNS        :     18 packets (  0.21%)
-ARP        :     14 packets (  0.16%)
-UDP        :      7 packets (  0.08%)
-IGMP       :      4 packets (  0.05%)
+MQTT       :   9256 packets ( 99.40%)
+HTTPS      :     28 packets (  0.30%)
+ARP        :     12 packets (  0.13%)
+UDP        :      8 packets (  0.09%)
+IPv6       :      8 packets (  0.09%)
 
 === Packet Type Distribution ===
-IP         :   8694 packets ( 99.17%)
-TCP        :   8665 packets ( 98.84%)
-IPv6       :     59 packets (  0.67%)
-UDP        :     25 packets (  0.29%)
-ARP        :     14 packets (  0.16%)
+IP         :   9292 packets ( 99.79%)
+TCP        :   9284 packets ( 99.70%)
+ARP        :     12 packets (  0.13%)
+UDP        :      8 packets (  0.09%)
+IPv6       :      8 packets (  0.09%)
 
 === Top Source IP Addresses ===
-192.168.146.97  :   4349 packets ( 49.61%)
-192.168.146.187 :   2382 packets ( 27.17%)
-192.168.146.112 :   1882 packets ( 21.47%)
-192.168.146.142 :     18 packets (  0.21%)
-13.107.9.158    :     18 packets (  0.21%)
-18.232.33.164   :     12 packets (  0.14%)
-54.165.29.152   :     12 packets (  0.14%)
-40.79.141.152   :     10 packets (  0.11%)
-48.218.107.32   :      6 packets (  0.07%)
-20.249.168.121  :      4 packets (  0.05%)
+192.168.70.97   :   4644 packets ( 49.87%)
+192.168.70.187  :   2393 packets ( 25.70%)
+192.168.70.112  :   2245 packets ( 24.11%)
+4.186.14.122    :      5 packets (  0.05%)
+48.218.104.163  :      5 packets (  0.05%)
 
 === Top Destination IP Addresses ===
-192.168.146.97  :   4336 packets ( 49.46%)
-192.168.146.187 :   2381 packets ( 27.16%)
-192.168.146.112 :   1879 packets ( 21.43%)
-13.107.9.158    :     20 packets (  0.23%)
-40.79.141.152   :     17 packets (  0.19%)
-48.218.107.32   :     11 packets (  0.13%)
-54.165.29.152   :     11 packets (  0.13%)
-18.232.33.164   :     10 packets (  0.11%)
-192.168.146.142 :      9 packets (  0.10%)
-224.0.0.251     :      7 packets (  0.08%)
+192.168.70.97   :   4640 packets ( 49.83%)
+192.168.70.187  :   2392 packets ( 25.69%)
+192.168.70.112  :   2234 packets ( 23.99%)
+4.186.14.122    :      9 packets (  0.10%)
+48.218.104.163  :      8 packets (  0.09%)
+224.0.0.251     :      8 packets (  0.09%)
+18.209.197.239  :      1 packets (  0.01%)
 
 === Top Source Ports ===
-Port 8883   :   4260 packets ( 48.59%)
-Port 51899  :   2380 packets ( 27.15%)
-Port 61889  :   1882 packets ( 21.47%)
-Port 443    :     63 packets (  0.72%)
-Port 64783  :     20 packets (  0.23%)
-Port 64784  :     17 packets (  0.19%)
-Port 64522  :     11 packets (  0.13%)
-Port 64786  :     11 packets (  0.13%)
-Port 64785  :     10 packets (  0.11%)
-Port 53     :      9 packets (  0.10%)
+Port 8883   :   4626 packets ( 49.68%)
+Port 58306  :   2392 packets ( 25.69%)
+Port 49697  :   2237 packets ( 24.02%)
+Port 443    :     10 packets (  0.11%)
+Port 51766  :      9 packets (  0.10%)
+Port 51811  :      8 packets (  0.09%)
+Port 5353   :      8 packets (  0.09%)
+Port 58305  :      1 packets (  0.01%)
+Port 51823  :      1 packets (  0.01%)
 
 === Top Destination Ports ===
-Port 8883   :   4264 packets ( 48.64%)
-Port 51899  :   2379 packets ( 27.14%)
-Port 61889  :   1879 packets ( 21.43%)
-Port 443    :     78 packets (  0.89%)
-Port 64783  :     18 packets (  0.21%)
-Port 64785  :     12 packets (  0.14%)
-Port 64786  :     12 packets (  0.14%)
-Port 64784  :     10 packets (  0.11%)
-Port 53     :      9 packets (  0.10%)
-Port 5353   :      7 packets (  0.08%)
+Port 8883   :   4630 packets ( 49.72%)
+Port 58306  :   2391 packets ( 25.68%)
+Port 49697  :   2234 packets ( 23.99%)
+Port 443    :     18 packets (  0.19%)
+Port 5353   :      8 packets (  0.09%)
+Port 51766  :      5 packets (  0.05%)
+Port 51811  :      5 packets (  0.05%)
+Port 58305  :      1 packets (  0.01%)
 
 === Protocol-Specific Statistics ===
 
-HTTPS Statistics:
-  Packet Count: 141
-  Average Latency: 81.59 ms
-  Max Latency: 5785.60 ms
-  Min Latency: 0.00 ms
-  Std Dev Latency: 530.30 ms
-  Average Jitter: 107.02 ms
-  Average Packet Size: 315.62 bytes
-
-MQTT Statistics:
-  Packet Count: 8524
-  Average Latency: 16.13 ms
-  Max Latency: 8537.88 ms
-  Min Latency: 0.00 ms
-  Std Dev Latency: 120.37 ms
-  Average Jitter: 26.19 ms
-  Average Packet Size: 116.54 bytes
-
-UDP Statistics:
-  Packet Count: 7
-  Average Latency: 3.76 ms
-  Max Latency: 17.12 ms
-  Min Latency: 0.00 ms
-  Std Dev Latency: 5.67 ms
-  Average Jitter: 7.73 ms
-  Average Packet Size: 97.86 bytes
-
-IGMP Statistics:
-  Packet Count: 4
-  Average Latency: 15.17 ms
-  Max Latency: 36.94 ms
-  Min Latency: 0.00 ms
-  Std Dev Latency: 14.94 ms
-  Average Jitter: 18.53 ms
-  Average Packet Size: 54.00 bytes
-
-DNS Statistics:
-  Packet Count: 18
-  Average Latency: 6.92 ms
-  Max Latency: 31.79 ms
-  Min Latency: 0.15 ms
-  Std Dev Latency: 9.00 ms
-  Average Jitter: 11.50 ms
-  Average Packet Size: 127.72 bytes
-
-IPv6 Statistics:
-  Packet Count: 59
-  Average Latency: 285.06 ms
-  Max Latency: 6273.68 ms
-  Min Latency: 0.00 ms
-  Std Dev Latency: 1168.18 ms
-  Average Jitter: 456.19 ms
-  Average Packet Size: 213.92 bytes
-
 ARP Statistics:
-  Packet Count: 13
-  Average Latency: 5.16 ms
-  Max Latency: 30.83 ms
-  Min Latency: 0.03 ms
-  Std Dev Latency: 8.59 ms
-  Average Jitter: 11.10 ms
+  Packet Count: 12
+  Average Latency: 124.69 ms
+  Max Latency: 1415.37 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 389.33 ms
+  Average Jitter: 260.47 ms
   Average Packet Size: 42.00 bytes
 
+HTTPS Statistics:
+  Packet Count: 28
+  Average Latency: 250.08 ms
+  Max Latency: 2565.04 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 579.92 ms
+  Average Jitter: 344.88 ms
+  Average Packet Size: 85.18 bytes
+
+MQTT Statistics:
+  Packet Count: 9255
+  Average Latency: 14.92 ms
+  Max Latency: 14000.83 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 147.73 ms
+  Average Jitter: 24.52 ms
+  Average Packet Size: 135.14 bytes
+
+UDP Statistics:
+  Packet Count: 8
+  Average Latency: 2.08 ms
+  Max Latency: 4.36 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 1.63 ms
+  Average Jitter: 1.47 ms
+  Average Packet Size: 161.38 bytes
+
+IPv6 Statistics:
+  Packet Count: 8
+  Average Latency: 4.64 ms
+  Max Latency: 14.85 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 4.59 ms
+  Average Jitter: 4.31 ms
+  Average Packet Size: 181.38 bytes
+
 === Retransmission Analysis ===
-Total Retransmissions: 4293
+Total Retransmissions: 4633
 
 Top Retransmission Events:
-  Time: 2024-11-20 12:50:32.897453 - Flow: ('48.218.107.32', 443, '192.168.146.97', 64522)
-  Time: 2024-11-20 12:50:32.897508 - Flow: ('192.168.146.97', 64522, '48.218.107.32', 443)
-  Time: 2024-11-20 12:50:34.980741 - Flow: ('192.168.146.112', 61889, '192.168.146.97', 8883)
-  Time: 2024-11-20 12:50:40.932291 - Flow: ('192.168.146.112', 61889, '192.168.146.97', 8883)
-  Time: 2024-11-20 12:50:49.531188 - Flow: ('192.168.146.97', 8883, '192.168.146.187', 51898)
-  Time: 2024-11-20 12:50:50.631173 - Flow: ('192.168.146.187', 51899, '192.168.146.97', 8883)
-  Time: 2024-11-20 12:50:50.686296 - Flow: ('192.168.146.97', 8883, '192.168.146.187', 51899)
-  Time: 2024-11-20 12:50:50.787768 - Flow: ('192.168.146.97', 8883, '192.168.146.187', 51899)
-  Time: 2024-11-20 12:50:50.800612 - Flow: ('192.168.146.112', 61889, '192.168.146.97', 8883)
-  Time: 2024-11-20 12:50:50.833773 - Flow: ('192.168.146.97', 8883, '192.168.146.187', 51899)
+  Time: 2025-01-28 22:22:13.421426 - Flow: ('192.168.70.97', 51766, '4.186.14.122', 443)
+  Time: 2025-01-28 22:22:15.541981 - Flow: ('192.168.70.112', 49697, '192.168.70.97', 8883)
+  Time: 2025-01-28 22:22:15.753478 - Flow: ('192.168.70.97', 8883, '192.168.70.112', 49697)
+  Time: 2025-01-28 22:22:15.757813 - Flow: ('192.168.70.112', 49697, '192.168.70.97', 8883)
+  Time: 2025-01-28 22:22:17.575671 - Flow: ('192.168.70.97', 51811, '48.218.104.163', 443)
+  Time: 2025-01-28 22:22:20.659820 - Flow: ('192.168.70.112', 49697, '192.168.70.97', 8883)
+  Time: 2025-01-28 22:22:20.881605 - Flow: ('192.168.70.97', 8883, '192.168.70.112', 49697)
+  Time: 2025-01-28 22:22:20.888163 - Flow: ('192.168.70.112', 49697, '192.168.70.97', 8883)
+  Time: 2025-01-28 22:22:37.229414 - Flow: ('192.168.70.97', 8883, '192.168.70.187', 58306)
+  Time: 2025-01-28 22:22:37.230973 - Flow: ('192.168.70.187', 58306, '192.168.70.97', 8883)
 
 === Performance Insights ===
-Average Packet Rate: 52.80 packets/second
+Average Packet Rate: 63.51 packets/second
 
 Protocol-specific Rates:
-  HTTPS     : 0.85 packets/second
-  MQTT      : 51.33 packets/second
-  UDP       : 0.04 packets/second
-  IGMP      : 0.02 packets/second
-  DNS       : 0.11 packets/second
-  IPv6      : 0.36 packets/second
   ARP       : 0.08 packets/second
+  HTTPS     : 0.19 packets/second
+  MQTT      : 63.13 packets/second
+  UDP       : 0.05 packets/second
+  IPv6      : 0.05 packets/second
 
-Average Network Load: 0.05 Mbps
+Average Network Load: 0.07 Mbps
 
 === Delay Category Analysis ===
 
 Bundling Delays:
-  Count: 2161
-  Average Delay: 0.11 ms
+  Count: 2529
+  Average Delay: 0.12 ms
   Maximum Delay: 1.00 ms
 
 Broker Processing Delays:
-  Count: 9
-  Average Delay: 2084.28 ms
-  Maximum Delay: 8537.88 ms
+  Count: 17
+  Average Delay: 1549.77 ms
+  Maximum Delay: 14000.83 ms
+
+Device To Broker Delays:
+  Count: 4922
+  Average Delay: 8.13 ms
+  Maximum Delay: 14000.83 ms
 
 === Packet Loss Analysis ===
 
 Overall Statistics:
-Total Lost Packets: 16
-Total Transmitted: 8767
-Overall Loss Percentage: 0.18%
-Total Loss Events: 16
+Total Lost Packets: 2
+Total Transmitted: 9312
+Overall Loss Percentage: 0.02%
+Total Loss Events: 2
 
 Per-Protocol Statistics:
 
+ARP:
+  Lost Packets: 0
+  Transmitted: 12
+  Loss Percentage: 0.00%
+  Loss Events: 0
+
 HTTPS:
   Lost Packets: 0
-  Transmitted: 141
+  Transmitted: 28
   Loss Percentage: 0.00%
   Loss Events: 0
 
 MQTT:
-  Lost Packets: 16
-  Transmitted: 8524
-  Loss Percentage: 0.19%
-  Loss Events: 16
+  Lost Packets: 2
+  Transmitted: 9255
+  Loss Percentage: 0.02%
+  Loss Events: 2
 
 UDP:
   Lost Packets: 0
-  Transmitted: 7
-  Loss Percentage: 0.00%
-  Loss Events: 0
-
-IGMP:
-  Lost Packets: 0
-  Transmitted: 4
-  Loss Percentage: 0.00%
-  Loss Events: 0
-
-DNS:
-  Lost Packets: 0
-  Transmitted: 18
+  Transmitted: 8
   Loss Percentage: 0.00%
   Loss Events: 0
 
 IPv6:
   Lost Packets: 0
-  Transmitted: 59
+  Transmitted: 8
   Loss Percentage: 0.00%
   Loss Events: 0
 
-ARP:
-  Lost Packets: 0
-  Transmitted: 13
-  Loss Percentage: 0.00%
-  Loss Events: 0
+=== IoT Traffic Analysis ===
+
+Device Transmission Patterns:
+
+  Device 192.168.70.112:
+    Small Packets: 2235
+    Bundled Packets: 0
+
+  Device 192.168.70.97:
+    Small Packets: 2571
+    Bundled Packets: 2052
+
+  Device 192.168.70.187:
+    Small Packets: 116
+    Bundled Packets: 2275

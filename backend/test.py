@@ -20,7 +20,11 @@ class PacketAnalyzer:
             'bundling_delays': [],
             'broker_processing_delays': [],
             'retransmission_delays': [],
-            'network_delays': []
+            'network_delays': [],
+            'device_to_broker_delays': [],
+            'broker_aggregation_delays': [],
+            'cloud_upload_delays': [],
+            'edge_processing_delays': []
         }
         self.packet_loss_stats = {
             'total_expected': 0,
@@ -28,6 +32,13 @@ class PacketAnalyzer:
             'lost_packets': defaultdict(list),
             'loss_timestamps': defaultdict(list),
             'protocol_stats': defaultdict(lambda: {'lost': 0, 'transmitted': 0})
+        }
+        self.iot_metrics = {
+            'packet_bundles': [],
+            'bundle_sizes': [],
+            'aggregation_intervals': [],
+            'device_patterns': defaultdict(list),
+            'upload_patterns': []
         }
         
     def basic_statistics(self):
@@ -53,9 +64,10 @@ class PacketAnalyzer:
 
     def analyze_delays(self):
         """Analyze various types of delays and packet loss"""
-        print("\nAnalyzing TCP sequence numbers for packet loss...")
+        print("\nAnalyzing TCP sequence numbers and IoT patterns...")
         seq_debug_count = 0
         flow_seq_tracking = {}
+        last_bundle_time = defaultdict(float)
         
         for i in range(len(self.packets)-1):
             pkt = self.packets[i]
@@ -80,10 +92,74 @@ class PacketAnalyzer:
             
             # Only process IP packets for delay categories
             if IP in pkt and IP in next_pkt:
-                # Classify delays
                 delay = float(next_pkt.time) - float(pkt.time)
                 
-                # Classify based on delay characteristics
+                # Analyze IoT-specific patterns
+                if TCP in pkt:
+                    # Check for MQTT ports (common in IoT)
+                    is_mqtt = (pkt[TCP].dport in [1883, 8883] or 
+                             pkt[TCP].sport in [1883, 8883])
+                    
+                    if is_mqtt:
+                        flow = (pkt[IP].src, pkt[TCP].sport, pkt[IP].dst, pkt[TCP].dport)
+                        payload_size = len(pkt[TCP].payload)
+                        
+                        # Device-to-Broker delays (typically small packets < 100 bytes)
+                        if payload_size < 100:
+                            self.delay_categories['device_to_broker_delays'].append({
+                                'time': float(pkt.time),
+                                'delay': delay * 1000,
+                                'size': payload_size,
+                                'flow': flow
+                            })
+                        
+                        # Broker aggregation delays (larger packets indicating bundling)
+                        if payload_size > 1000:  # Threshold for bundled data
+                            self.delay_categories['broker_aggregation_delays'].append({
+                                'time': float(pkt.time),
+                                'delay': delay * 1000,
+                                'size': payload_size,
+                                'flow': flow
+                            })
+                            
+                            # Track bundle patterns
+                            self.iot_metrics['packet_bundles'].append({
+                                'time': float(pkt.time),
+                                'size': payload_size,
+                                'flow': flow
+                            })
+                            self.iot_metrics['bundle_sizes'].append(payload_size)
+                            
+                            # Calculate aggregation interval
+                            if last_bundle_time[flow]:
+                                interval = float(pkt.time) - last_bundle_time[flow]
+                                self.iot_metrics['aggregation_intervals'].append(interval)
+                            last_bundle_time[flow] = float(pkt.time)
+                        
+                        # Cloud upload delays (large packets with sustained high throughput)
+                        if (payload_size > 5000 and  # Large packets
+                            len(self.tcp_flows[flow]) > 5):  # Sustained flow
+                            self.delay_categories['cloud_upload_delays'].append({
+                                'time': float(pkt.time),
+                                'delay': delay * 1000,
+                                'size': payload_size,
+                                'flow': flow
+                            })
+                            
+                            self.iot_metrics['upload_patterns'].append({
+                                'time': float(pkt.time),
+                                'size': payload_size,
+                                'flow': flow
+                            })
+                        
+                        # Track device transmission patterns
+                        self.iot_metrics['device_patterns'][pkt[IP].src].append({
+                            'time': float(pkt.time),
+                            'size': payload_size,
+                            'type': 'small' if payload_size < 100 else 'bundle'
+                        })
+                
+                # Classify delays
                 if delay > 0.1:  # More than 100ms
                     self.delay_categories['broker_processing_delays'].append({
                         'time': float(pkt.time),
@@ -542,6 +618,33 @@ class PacketAnalyzer:
                     f.write(f"  Loss Percentage: {stats['loss_percentage']:.2f}%\n")
                     f.write(f"  Loss Events: {stats['loss_events']}\n")
 
+            # Add IoT-specific analysis
+            f.write("\n=== IoT Traffic Analysis ===\n")
+            
+            # Bundle analysis
+            if self.iot_metrics['bundle_sizes']:
+                avg_bundle = np.mean(self.iot_metrics['bundle_sizes'])
+                max_bundle = max(self.iot_metrics['bundle_sizes'])
+                f.write(f"\nPacket Bundling:\n")
+                f.write(f"  Total Bundles: {len(self.iot_metrics['packet_bundles'])}\n")
+                f.write(f"  Average Bundle Size: {avg_bundle:.2f} bytes\n")
+                f.write(f"  Maximum Bundle Size: {max_bundle:.2f} bytes\n")
+            
+            # Aggregation intervals
+            if self.iot_metrics['aggregation_intervals']:
+                avg_interval = np.mean(self.iot_metrics['aggregation_intervals'])
+                f.write(f"\nAggregation Patterns:\n")
+                f.write(f"  Average Interval: {avg_interval:.2f} seconds\n")
+            
+            # Device patterns
+            f.write("\nDevice Transmission Patterns:\n")
+            for device, patterns in self.iot_metrics['device_patterns'].items():
+                small_pkts = sum(1 for p in patterns if p['type'] == 'small')
+                bundle_pkts = sum(1 for p in patterns if p['type'] == 'bundle')
+                f.write(f"\n  Device {device}:\n")
+                f.write(f"    Small Packets: {small_pkts}\n")
+                f.write(f"    Bundled Packets: {bundle_pkts}\n")
+
     def get_capture_overview(self):
         """Generate a comprehensive overview of the capture file"""
         overview = {
@@ -649,7 +752,7 @@ class PacketAnalyzer:
             print(f"  Port {port:<6} : {count:>6} packets ({percentage:>6.2f}%)")
 
 def main():
-    pcap_file = "/home/soham/Documents/hackenza2.0/backend/pcapngFiles/Messy/20_11_24_bro_laptop_30ms_2min.pcapng"  # Replace with your pcap file
+    pcap_file = "/home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-laptp-20ms.pcapng"  # Replace with your pcap file
     
     print(f"Analyzing {pcap_file}...")
     analyzer = PacketAnalyzer(pcap_file)
