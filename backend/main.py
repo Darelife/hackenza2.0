@@ -41,7 +41,7 @@ def get_overview():
         percentage = (count / total_packets) * 100
         # f.write(f"{proto:<10} : {count:>6} packets ({percentage:>6.2f}%)\n")
         # dict instead
-        t = f"{proto:<10}"
+        t = f"{proto}"
         data["Protocol"].append({
             "name" : t,
             "packets": count,
@@ -52,7 +52,7 @@ def get_overview():
         percentage = (count / total_packets) * 100
         # f.write(f"{pkt_type:<10} : {count:>6} packets ({percentage:>6.2f}%)\n")
         # dict instead
-        t = f"{pkt_type:<10}"
+        t = f"{pkt_type}"
         data["Packet"].append({
             "name" : t,
             "packets": count,
