@@ -1,3 +1,6 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
 import * as React from 'react';
 
 import {
@@ -21,35 +24,45 @@ const data = {
       items: [
         {
           title: 'Overview',
-          url: '#',
+          url: '/overview',
         },
         {
           title: 'Classification',
-          url: '#',
+          url: '/classification',
         },
         {
           title: 'Visualization',
-          url: '#',
+          url: '/visualization',
         },
         {
           title: 'Comparison',
-          url: '#',
+          url: '/comparison',
         },
         {
           title: 'Search and Filter',
-          url: '#',
+          url: '/search',
         },
       ],
     },
   ],
 };
 
-export function AppSidebar({ 
-  activeItem = 'Overview',
-  ...props 
-}: React.ComponentProps<typeof Sidebar> & { 
-  activeItem?: string 
+export function AppSidebar({
+  activeItem,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  activeItem?: string;
 }) {
+  const pathname = usePathname();
+
+  // Determine active item based on current path if not explicitly provided
+  const currentActive =
+    activeItem ||
+    data.navMain[0].items.find(
+      (item) => pathname === item.url || pathname?.startsWith(item.url + '/'),
+    )?.title ||
+    'Overview';
+
   return (
     <Sidebar {...props}>
       <SidebarHeader>
@@ -63,7 +76,10 @@ export function AppSidebar({
               <SidebarMenu>
                 {item.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={item.title === activeItem}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={item.title === currentActive}
+                    >
                       <a href={item.url}>{item.title}</a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

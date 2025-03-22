@@ -11,43 +11,62 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
-interface ProtocolData {
+interface DataItem {
   name: string;
   packets: number;
   percentage: number;
 }
 
-interface ProtocolTableProps {
-  data: ProtocolData[];
+interface DataTableProps {
+  data: DataItem[];
+  title?: string;
   className?: string;
+  columns?: {
+    nameLabel?: string;
+    packetLabel?: string;
+    percentageLabel?: string;
+  };
 }
 
-export function ProtocolTable({ data, className }: ProtocolTableProps) {
+export function DataTable({
+  data,
+  title = 'Data Distribution',
+  className = '',
+  columns = {
+    nameLabel: 'Name',
+    packetLabel: 'Packets',
+    percentageLabel: 'Percentage',
+  },
+}: DataTableProps) {
   const sortedData = [...data].sort((a, b) => b.percentage - a.percentage);
 
   return (
     <Card className={cn('w-full', className)}>
       <CardHeader>
-        <CardTitle>Protocol Distribution</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className='w-[200px]'>Protocol</TableHead>
-              <TableHead className='text-right'>Packets</TableHead>
-              <TableHead className='text-right'>Percentage</TableHead>
+              <TableHead className='w-[200px]'>{columns.nameLabel}</TableHead>
+              <TableHead className='text-right'>
+                {columns.packetLabel}
+              </TableHead>
+              <TableHead className='text-right'>
+                {columns.percentageLabel}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedData.map((protocol) => (
-              <TableRow key={protocol.name}>
-                <TableCell className='font-medium'>{protocol.name}</TableCell>
+            {sortedData.map((item) => (
+              <TableRow key={item.name}>
+                <TableCell className='font-medium'>{item.name}</TableCell>
                 <TableCell className='text-right'>
-                  {protocol.packets.toLocaleString()} packets
+                  {item.packets.toLocaleString()} packets
                 </TableCell>
                 <TableCell className='text-right'>
-                  {protocol.percentage.toFixed(2)}%
+                  {item.percentage.toFixed(2)}%
                 </TableCell>
               </TableRow>
             ))}
