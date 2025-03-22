@@ -3,15 +3,19 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { AlertCircle, Upload } from 'lucide-react';
+import { AlertCircle, Upload, File, X } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function PcapngUploader() {
-  const [file, setFile] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -49,9 +53,12 @@ export default function PcapngUploader() {
       return;
     }
 
+    setFile(selectedFile);
+
+    // Create a preview if needed
     const reader = new FileReader();
     reader.onload = (event) => {
-      setFile(event.target?.result as string);
+      setFilePreview(event.target?.result as string);
     };
     reader.readAsDataURL(selectedFile);
   };
@@ -61,43 +68,93 @@ export default function PcapngUploader() {
   };
 
   const handleSubmit = async () => {
-    if (!file || !fileInputRef.current?.files?.[0]) return;
-    
+    if (!file) return;
+
     setIsSubmitting(true);
-    
+    setUploadProgress(0);
+    setError(null);
+
     try {
       const formData = new FormData();
-      formData.append('file', fileInputRef.current.files[0]);
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      formData.append('file', file);
+
+      // Use XMLHttpRequest to track upload progress
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round(
+            (event.loaded / event.total) * 100,
+          );
+          setUploadProgress(percentComplete);
+        }
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to upload file');
-      }
 
-      // save the response as a cookie
-      const data = await response.json();
-      document.cookie = `data=${JSON.stringify(data)}`;
+      // Create a promise to handle the XHR request
+      const uploadPromise = new Promise<any>((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch (e) {
+              reject(new Error('Invalid response from server'));
+            }
+          } else {
+            reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+          }
+        };
 
-      // redirect to the results page
-      window.location.href = '/overview';
-      
-      // Handle successful upload
-      console.log('File uploaded successfully');
-      // You can add additional handling here
-      
+        xhr.onerror = () => {
+          reject(new Error('Network error occurred'));
+        };
+      });
+
+      // Send the request
+      xhr.open('POST', 'http://127.0.0.1:5000/api/upload');
+      xhr.send(formData);
+
+      // Wait for the upload to complete
+      const data = await uploadPromise;
+      console.log('Upload and analysis successful:', data);
+
+      // Store the analysis data directly in localStorage (no need to reference stored files)
+      localStorage.setItem(
+        'analysisData',
+        JSON.stringify({
+          data: data,
+          originalFilename: file.name,
+          timestamp: new Date().toISOString(),
+        }),
+      );
+
+      // Redirect to the overview page
+      router.push('/overview');
     } catch (err) {
+      console.error('Upload error:', err);
       setError(err instanceof Error ? err.message : 'Failed to upload file');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const resetFile = () => {
+    setFile(null);
+    setFilePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className='w-full max-w-3xl mx-auto p-6 space-y-6'>
+      <h1 className='text-2xl font-bold text-center mb-6'>
+        Network Packet Analyzer
+      </h1>
+      <p className='text-center text-muted-foreground mb-8'>
+        Upload a PCAPNG file to analyze network traffic patterns and protocols
+      </p>
+
       {error && (
         <Alert variant='destructive'>
           <AlertCircle className='h-4 w-4' />
@@ -111,7 +168,7 @@ export default function PcapngUploader() {
             'border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors',
             isDragging
               ? 'border-primary bg-primary/5'
-              : 'border-muted-foreground/25 hover:border-primary/50'
+              : 'border-muted-foreground/25 hover:border-primary/50',
           )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -147,40 +204,59 @@ export default function PcapngUploader() {
           <div className='w-full p-6 border rounded-lg bg-muted/30'>
             <div className='flex items-center gap-4'>
               <div className='p-3 rounded-full bg-primary/10'>
-                <Upload className='h-6 w-6 text-primary' />
+                <File className='h-6 w-6 text-primary' />
               </div>
               <div className='flex-1'>
-                <p className='font-medium'>File uploaded successfully</p>
+                <p className='font-medium'>File ready to upload</p>
                 <p className='text-sm text-muted-foreground'>
-                  {fileInputRef.current?.files?.[0]?.name || 'pcapng file'}
-                  {fileInputRef.current?.files?.[0]?.size
-                    ? ` (${(
-                        fileInputRef.current.files[0].size /
-                        1024 /
-                        1024
-                      ).toFixed(2)} MB)`
+                  {file.name}
+                  {file.size
+                    ? ` (${(file.size / 1024 / 1024).toFixed(2)} MB)`
                     : ''}
                 </p>
               </div>
+              {!isSubmitting && (
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  onClick={resetFile}
+                  className='h-8 w-8'
+                >
+                  <X className='h-4 w-4' />
+                </Button>
+              )}
             </div>
+
+            {isSubmitting && (
+              <div className='mt-4 space-y-2'>
+                <div className='w-full bg-secondary rounded-full h-2.5'>
+                  <div
+                    className='bg-primary h-2.5 rounded-full'
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <p className='text-xs text-right text-muted-foreground'>
+                  {uploadProgress}% uploaded
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className='flex justify-between'>
-            <Button variant='outline' onClick={triggerFileInput}>
-              Change File
-            </Button>
-            <div className='flex gap-2'>
-                <Button variant='destructive' onClick={() => setFile(null)} className="hover:bg-red-700">
-                Remove
-                </Button>
-              <Button 
-                onClick={handleSubmit} 
-                disabled={isSubmitting}
-                className='bg-blue-600 hover:bg-blue-700 text-white'
-              >
-                {isSubmitting ? 'Uploading...' : 'Confirm'}
+          <div className='flex justify-end gap-2'>
+            {!isSubmitting && (
+              <Button variant='outline' onClick={triggerFileInput}>
+                Change File
               </Button>
-            </div>
+            )}
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className='bg-blue-600 hover:bg-blue-700 text-white'
+            >
+              {isSubmitting
+                ? `Uploading ${uploadProgress}%`
+                : 'Upload & Analyze'}
+            </Button>
           </div>
         </div>
       )}
