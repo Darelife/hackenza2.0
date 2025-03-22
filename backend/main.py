@@ -27,7 +27,16 @@ def index():
 
 @app.route("/api/getOverview", methods=["GET"])
 def get_overview():
-    pcap_file = "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng" 
+    data = request.get_json() 
+    # For GET requests, use a default file or get from query params
+    if request.method == "GET":
+        pcap_file = request.args.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng")
+    # For POST requests with JSON payload
+    else:
+        pcap_file = data.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng")
+    if not os.path.exists(pcap_file):
+        return jsonify({"error": "PCAP file not found"}), 404
+    
     pa = PacketAnalyzer(pcap_file)
     stats = pa.basic_statistics()
     total_packets = stats['total_packets']
