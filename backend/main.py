@@ -27,7 +27,39 @@ def index():
 
 @app.route("/api/getOverview", methods=["GET"])
 def get_overview():
-    return jsonify({"message": "Overview"})    
+    pa = PacketAnalyzer()
+    stats = pa.basic_statistics()
+    total_packets = stats['total_packets']
+
+    overview = pa.get_capture_overview()
+    data = {
+        "Protocol" : [],
+        "Packet" : []
+    }
+    for proto, count in sorted(overview['protocols'].items(), key=lambda x: x[1], reverse=True):
+        percentage = (count / total_packets) * 100
+        # f.write(f"{proto:<10} : {count:>6} packets ({percentage:>6.2f}%)\n")
+        # dict instead
+        t = f"{proto:<10}"
+        data["Protocol"].append({
+            "name" : t,
+            "packets": count,
+            "percentage": percentage
+        })
+    
+    for pkt_type, count in sorted(overview['packet_counts'].items(), key=lambda x: x[1], reverse=True):
+        percentage = (count / total_packets) * 100
+        # f.write(f"{pkt_type:<10} : {count:>6} packets ({percentage:>6.2f}%)\n")
+        # dict instead
+        t = f"{pkt_type:<10}"
+        data["Packet"].append({
+            "name" : t,
+            "packets": count,
+            "percentage": percentage
+        })
+    
+    data["total_packets"] = total_packets
+    return jsonify(data)
 
 
 @app.route("/api/data", methods=["GET"])
