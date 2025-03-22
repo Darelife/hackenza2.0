@@ -3,9 +3,9 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { AlertCircle, Upload, File, X } from 'lucide-react';
-import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { AlertCircle, File, Loader2, Upload, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 
 export default function PcapngUploader() {
   const [file, setFile] = useState<File | null>(null);
@@ -14,6 +14,7 @@ export default function PcapngUploader() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -73,6 +74,7 @@ export default function PcapngUploader() {
     setIsSubmitting(true);
     setUploadProgress(0);
     setError(null);
+    setIsAnalyzing(false);
 
     try {
       const formData = new FormData();
@@ -87,6 +89,11 @@ export default function PcapngUploader() {
             (event.loaded / event.total) * 100,
           );
           setUploadProgress(percentComplete);
+
+          // If upload is complete (100%), set analyzing state
+          if (percentComplete === 100) {
+            setIsAnalyzing(true);
+          }
         }
       });
 
@@ -133,6 +140,7 @@ export default function PcapngUploader() {
     } catch (err) {
       console.error('Upload error:', err);
       setError(err instanceof Error ? err.message : 'Failed to upload file');
+      setIsAnalyzing(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -144,6 +152,17 @@ export default function PcapngUploader() {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  // Determine the button text based on current state
+  const getButtonText = () => {
+    if (isAnalyzing) {
+      return 'Analyzing...';
+    }
+    if (isSubmitting) {
+      return `Uploading ${uploadProgress}%`;
+    }
+    return 'Upload & Analyze';
   };
 
   return (
@@ -215,7 +234,7 @@ export default function PcapngUploader() {
                     : ''}
                 </p>
               </div>
-              {!isSubmitting && (
+              {!isSubmitting && !isAnalyzing && (
                 <Button
                   variant='ghost'
                   size='icon'
@@ -227,35 +246,38 @@ export default function PcapngUploader() {
               )}
             </div>
 
-            {isSubmitting && (
+            {(isSubmitting || isAnalyzing) && (
               <div className='mt-4 space-y-2'>
                 <div className='w-full bg-secondary rounded-full h-2.5'>
                   <div
                     className='bg-primary h-2.5 rounded-full'
-                    style={{ width: `${uploadProgress}%` }}
+                    style={{
+                      width: isAnalyzing ? '100%' : `${uploadProgress}%`,
+                    }}
                   ></div>
                 </div>
                 <p className='text-xs text-right text-muted-foreground'>
-                  {uploadProgress}% uploaded
+                  {isAnalyzing
+                    ? 'Processing file...'
+                    : `${uploadProgress}% uploaded`}
                 </p>
               </div>
             )}
           </div>
 
           <div className='flex justify-end gap-2'>
-            {!isSubmitting && (
+            {!isSubmitting && !isAnalyzing && (
               <Button variant='outline' onClick={triggerFileInput}>
                 Change File
               </Button>
             )}
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isAnalyzing}
               className='bg-blue-600 hover:bg-blue-700 text-white'
             >
-              {isSubmitting
-                ? `Uploading ${uploadProgress}%`
-                : 'Upload & Analyze'}
+              {isAnalyzing && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+              {getButtonText()}
             </Button>
           </div>
         </div>

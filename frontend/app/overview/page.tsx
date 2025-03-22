@@ -125,7 +125,7 @@ export default function Page() {
           {analysisInfo && analysisInfo.originalFilename && (
             <div className='p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md text-sm'>
               <p className='font-medium'>
-                Analyzing: {analysisInfo.originalFilename}
+                Analyzed: {analysisInfo.originalFilename}
               </p>
               <p className='text-muted-foreground text-xs'>
                 Uploaded on {new Date(analysisInfo.timestamp).toLocaleString()}
