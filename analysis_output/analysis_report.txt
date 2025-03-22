@@ -1,0 +1,208 @@
+=====================================
+=== PCAP ANALYSIS DETAILED REPORT ===
+=====================================
+
+File: /home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-laptp-20ms.pcapng
+Total Packets: 9312
+
+Capture Duration: 146.63 seconds
+Start Time: 2025-01-28 22:22:11.345350
+End Time: 2025-01-28 22:24:37.975005
+
+=== Protocol Distribution ===
+MQTT       :   9256 packets ( 99.40%)
+HTTPS      :     28 packets (  0.30%)
+ARP        :     12 packets (  0.13%)
+UDP        :      8 packets (  0.09%)
+IPv6       :      8 packets (  0.09%)
+
+=== Packet Type Distribution ===
+IP         :   9292 packets ( 99.79%)
+TCP        :   9284 packets ( 99.70%)
+ARP        :     12 packets (  0.13%)
+UDP        :      8 packets (  0.09%)
+IPv6       :      8 packets (  0.09%)
+
+=== Top Source IP Addresses ===
+192.168.70.97   :   4644 packets ( 49.87%)
+192.168.70.187  :   2393 packets ( 25.70%)
+192.168.70.112  :   2245 packets ( 24.11%)
+4.186.14.122    :      5 packets (  0.05%)
+48.218.104.163  :      5 packets (  0.05%)
+
+=== Top Destination IP Addresses ===
+192.168.70.97   :   4640 packets ( 49.83%)
+192.168.70.187  :   2392 packets ( 25.69%)
+192.168.70.112  :   2234 packets ( 23.99%)
+4.186.14.122    :      9 packets (  0.10%)
+48.218.104.163  :      8 packets (  0.09%)
+224.0.0.251     :      8 packets (  0.09%)
+18.209.197.239  :      1 packets (  0.01%)
+
+=== Top Source Ports ===
+Port 8883   :   4626 packets ( 49.68%)
+Port 58306  :   2392 packets ( 25.69%)
+Port 49697  :   2237 packets ( 24.02%)
+Port 443    :     10 packets (  0.11%)
+Port 51766  :      9 packets (  0.10%)
+Port 51811  :      8 packets (  0.09%)
+Port 5353   :      8 packets (  0.09%)
+Port 58305  :      1 packets (  0.01%)
+Port 51823  :      1 packets (  0.01%)
+
+=== Top Destination Ports ===
+Port 8883   :   4630 packets ( 49.72%)
+Port 58306  :   2391 packets ( 25.68%)
+Port 49697  :   2234 packets ( 23.99%)
+Port 443    :     18 packets (  0.19%)
+Port 5353   :      8 packets (  0.09%)
+Port 51766  :      5 packets (  0.05%)
+Port 51811  :      5 packets (  0.05%)
+Port 58305  :      1 packets (  0.01%)
+
+=== Protocol-Specific Statistics ===
+
+ARP Statistics:
+  Packet Count: 12
+  Average Latency: 124.69 ms
+  Max Latency: 1415.37 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 389.33 ms
+  Average Jitter: 260.47 ms
+  Average Packet Size: 42.00 bytes
+
+HTTPS Statistics:
+  Packet Count: 28
+  Average Latency: 250.08 ms
+  Max Latency: 2565.04 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 579.92 ms
+  Average Jitter: 344.88 ms
+  Average Packet Size: 85.18 bytes
+
+MQTT Statistics:
+  Packet Count: 9255
+  Average Latency: 14.92 ms
+  Max Latency: 14000.83 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 147.73 ms
+  Average Jitter: 24.52 ms
+  Average Packet Size: 135.14 bytes
+
+UDP Statistics:
+  Packet Count: 8
+  Average Latency: 2.08 ms
+  Max Latency: 4.36 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 1.63 ms
+  Average Jitter: 1.47 ms
+  Average Packet Size: 161.38 bytes
+
+IPv6 Statistics:
+  Packet Count: 8
+  Average Latency: 4.64 ms
+  Max Latency: 14.85 ms
+  Min Latency: 0.00 ms
+  Std Dev Latency: 4.59 ms
+  Average Jitter: 4.31 ms
+  Average Packet Size: 181.38 bytes
+
+=== Retransmission Analysis ===
+Total Retransmissions: 4633
+
+Top Retransmission Events:
+  Time: 2025-01-28 22:22:13.421426 - Flow: ('192.168.70.97', 51766, '4.186.14.122', 443)
+  Time: 2025-01-28 22:22:15.541981 - Flow: ('192.168.70.112', 49697, '192.168.70.97', 8883)
+  Time: 2025-01-28 22:22:15.753478 - Flow: ('192.168.70.97', 8883, '192.168.70.112', 49697)
+  Time: 2025-01-28 22:22:15.757813 - Flow: ('192.168.70.112', 49697, '192.168.70.97', 8883)
+  Time: 2025-01-28 22:22:17.575671 - Flow: ('192.168.70.97', 51811, '48.218.104.163', 443)
+  Time: 2025-01-28 22:22:20.659820 - Flow: ('192.168.70.112', 49697, '192.168.70.97', 8883)
+  Time: 2025-01-28 22:22:20.881605 - Flow: ('192.168.70.97', 8883, '192.168.70.112', 49697)
+  Time: 2025-01-28 22:22:20.888163 - Flow: ('192.168.70.112', 49697, '192.168.70.97', 8883)
+  Time: 2025-01-28 22:22:37.229414 - Flow: ('192.168.70.97', 8883, '192.168.70.187', 58306)
+  Time: 2025-01-28 22:22:37.230973 - Flow: ('192.168.70.187', 58306, '192.168.70.97', 8883)
+
+=== Performance Insights ===
+Average Packet Rate: 63.51 packets/second
+
+Protocol-specific Rates:
+  ARP       : 0.08 packets/second
+  HTTPS     : 0.19 packets/second
+  MQTT      : 63.13 packets/second
+  UDP       : 0.05 packets/second
+  IPv6      : 0.05 packets/second
+
+Average Network Load: 0.07 Mbps
+
+=== Delay Category Analysis ===
+
+Bundling Delays:
+  Count: 2529
+  Average Delay: 0.12 ms
+  Maximum Delay: 1.00 ms
+
+Broker Processing Delays:
+  Count: 17
+  Average Delay: 1549.77 ms
+  Maximum Delay: 14000.83 ms
+
+Device To Broker Delays:
+  Count: 4922
+  Average Delay: 8.13 ms
+  Maximum Delay: 14000.83 ms
+
+=== Packet Loss Analysis ===
+
+Overall Statistics:
+Total Lost Packets: 2
+Total Transmitted: 9312
+Overall Loss Percentage: 0.02%
+Total Loss Events: 2
+
+Per-Protocol Statistics:
+
+ARP:
+  Lost Packets: 0
+  Transmitted: 12
+  Loss Percentage: 0.00%
+  Loss Events: 0
+
+HTTPS:
+  Lost Packets: 0
+  Transmitted: 28
+  Loss Percentage: 0.00%
+  Loss Events: 0
+
+MQTT:
+  Lost Packets: 2
+  Transmitted: 9255
+  Loss Percentage: 0.02%
+  Loss Events: 2
+
+UDP:
+  Lost Packets: 0
+  Transmitted: 8
+  Loss Percentage: 0.00%
+  Loss Events: 0
+
+IPv6:
+  Lost Packets: 0
+  Transmitted: 8
+  Loss Percentage: 0.00%
+  Loss Events: 0
+
+=== IoT Traffic Analysis ===
+
+Device Transmission Patterns:
+
+  Device 192.168.70.112:
+    Small Packets: 2235
+    Bundled Packets: 0
+
+  Device 192.168.70.97:
+    Small Packets: 2571
+    Bundled Packets: 2052
+
+  Device 192.168.70.187:
+    Small Packets: 116
+    Bundled Packets: 2275
