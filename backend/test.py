@@ -167,8 +167,8 @@ class PacketAnalyzer:
         """Determine packet protocol with expanded protocol detection"""
         if IP in pkt:
             if TCP in pkt:
-                # MQTT
-                if pkt[TCP].dport == 1883 or pkt[TCP].sport == 1883:
+                # MQTT (both standard and secure)
+                if pkt[TCP].dport in [1883, 8883] or pkt[TCP].sport in [1883, 8883]:
                     return 'MQTT'
                 # HTTP/HTTPS
                 elif pkt[TCP].dport in [80, 8080] or pkt[TCP].sport in [80, 8080]:
@@ -337,12 +337,28 @@ class PacketAnalyzer:
 
     def _plot_packet_size_distribution(self, output_dir):
         plt.figure(figsize=(12, 6))
+        has_data = False
+        
         for proto in self.packet_sizes:
-            sns.kdeplot(data=self.packet_sizes[proto], label=proto)
-        plt.xlabel('Packet Size (bytes)')
-        plt.ylabel('Density')
-        plt.title('Packet Size Distribution by Protocol')
-        plt.legend()
+            sizes = self.packet_sizes[proto]
+            if len(sizes) > 1 and np.var(sizes) > 0:  # Check if we have varying data
+                sns.kdeplot(data=sizes, label=f"{proto} (n={len(sizes)})")
+                has_data = True
+            elif len(sizes) > 0:  # If we have data but no variance
+                avg_size = np.mean(sizes)
+                plt.axvline(x=avg_size, label=f"{proto} (constant {avg_size:.0f} bytes, n={len(sizes)})", 
+                           linestyle='--')
+                has_data = True
+        
+        if has_data:
+            plt.xlabel('Packet Size (bytes)')
+            plt.ylabel('Density')
+            plt.title('Packet Size Distribution by Protocol')
+            plt.legend()
+        else:
+            plt.text(0.5, 0.5, 'No packet size data available', 
+                    horizontalalignment='center', verticalalignment='center')
+        
         plt.savefig(f'{output_dir}/packet_size_distribution.png')
         plt.close()
 
@@ -633,7 +649,7 @@ class PacketAnalyzer:
             print(f"  Port {port:<6} : {count:>6} packets ({percentage:>6.2f}%)")
 
 def main():
-    pcap_file = "/home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-rpi-30ms.pcapng"  # Replace with your pcap file
+    pcap_file = "/home/soham/Documents/hackenza2.0/backend/pcapngFiles/Messy/20_11_24_bro_laptop_30ms_2min.pcapng"  # Replace with your pcap file
     
     print(f"Analyzing {pcap_file}...")
     analyzer = PacketAnalyzer(pcap_file)
