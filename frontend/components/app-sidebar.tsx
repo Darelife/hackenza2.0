@@ -12,7 +12,6 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import { BreadcrumbItem } from './ui/breadcrumb';
 
 const data = {
   navMain: [
@@ -50,7 +49,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
       <SidebarHeader>
-        <div>packet analysis</div>
+        <div className='flex text-lg font-semibold p-2'>Packet Analysis</div>
       </SidebarHeader>
       <SidebarContent>
         {data.navMain.map((item) => (
