@@ -67,7 +67,11 @@ export default function PcapngUploader() {
     
     try {
       const formData = new FormData();
-      formData.append('file', fileInputRef.current.files[0]);
+      // Append the file with the key that backend expects
+      formData.append('pcap_file', fileInputRef.current.files[0]);
+
+      // saving the formdata in the local storage
+      localStorage.setItem('formData', JSON.stringify(formData));
       
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -77,10 +81,12 @@ export default function PcapngUploader() {
       if (!response.ok) {
         throw new Error('Failed to upload file');
       }
+      // save the file as a cookie
+      // document.cookie = `file=${file}`;
 
       // save the response as a cookie
-      const data = await response.json();
-      document.cookie = `data=${JSON.stringify(data)}`;
+      // const data = await response.json();
+      // document.cookie = `data=${JSON.stringify(data)}`;
 
       // redirect to the results page
       window.location.href = '/overview';
