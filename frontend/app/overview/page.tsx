@@ -909,7 +909,7 @@ export default function Page() {
               </div>
             )}
 
-          {/* Add Top Sources and Destinations if available */}
+          {/* Add Top Sources and Destinations if available
           {displayData.ip_stats && (
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
               <div className='rounded-xl bg-muted/50 p-4'>
@@ -995,6 +995,158 @@ export default function Page() {
                           </div>
                         ))
                     )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )} */}
+
+          {/* Update the Top Sources and Destinations section to be more colorful */}
+          {displayData.ip_stats && (
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
+              <div className='rounded-xl bg-muted/50 p-4'>
+                <h3 className='text-lg font-medium mb-4'>Top Source IPs</h3>
+                <div className='space-y-3'>
+                  {loading ? (
+                    <div className='h-40 animate-pulse bg-muted rounded-md'></div>
+                  ) : (
+                    displayData.ip_stats.top_sources
+                      ?.slice(0, 5)
+                      .map((source, index) => {
+                        // Calculate color based on percentage
+                        const getColor = () => {
+                          if (source.percentage > 50) {
+                            return {
+                              bg: 'bg-blue-100 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+                              text: 'text-blue-800 dark:text-blue-400',
+                            };
+                          } else if (source.percentage > 20) {
+                            return {
+                              bg: 'bg-indigo-100 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800',
+                              text: 'text-indigo-800 dark:text-indigo-400',
+                            };
+                          } else if (source.percentage > 5) {
+                            return {
+                              bg: 'bg-purple-100 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800',
+                              text: 'text-purple-800 dark:text-purple-400',
+                            };
+                          }
+                          return {
+                            bg: 'bg-slate-100 dark:bg-slate-900/20 border-slate-200 dark:border-slate-800',
+                            text: 'text-slate-800 dark:text-slate-400',
+                          };
+                        };
+
+                        const colors = getColor();
+
+                        return (
+                          <div
+                            key={index}
+                            className={`flex items-center justify-between border rounded-lg p-3 ${colors.bg}`}
+                          >
+                            <div className='flex items-center'>
+                              <div className='w-8 h-8 rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center mr-3'>
+                                {index + 1}
+                              </div>
+                              <span className='font-mono'>{source.ip}</span>
+                            </div>
+                            <div className='flex items-center gap-3'>
+                              <span className='text-sm'>
+                                {source.packets.toLocaleString()} pkts
+                              </span>
+                              <span
+                                className={`text-xs px-2 py-1 rounded-full ${colors.text} font-medium`}
+                              >
+                                {source.percentage.toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+              </div>
+
+              {displayData.port_stats && (
+                <div className='rounded-xl bg-muted/50 p-4'>
+                  <h3 className='text-lg font-medium mb-4'>
+                    Top Destination Ports
+                  </h3>
+                  <div className='space-y-3'>
+                    {loading ? (
+                      <div className='h-40 animate-pulse bg-muted rounded-md'></div>
+                    ) : (
+                      displayData.port_stats.top_destinations
+                        ?.slice(0, 5)
+                        .map((port, index) => {
+                          // Calculate color based on percentage
+                          const getColor = () => {
+                            if (port.percentage > 50) {
+                              return {
+                                bg: 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800',
+                                text: 'text-green-800 dark:text-green-400',
+                              };
+                            } else if (port.percentage > 20) {
+                              return {
+                                bg: 'bg-emerald-100 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
+                                text: 'text-emerald-800 dark:text-emerald-400',
+                              };
+                            } else if (port.percentage > 5) {
+                              return {
+                                bg: 'bg-teal-100 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800',
+                                text: 'text-teal-800 dark:text-teal-400',
+                              };
+                            }
+                            return {
+                              bg: 'bg-slate-100 dark:bg-slate-900/20 border-slate-200 dark:border-slate-800',
+                              text: 'text-slate-800 dark:text-slate-400',
+                            };
+                          };
+
+                          const colors = getColor();
+                          const serviceName = getServiceName(port.port);
+
+                          return (
+                            <div
+                              key={index}
+                              className={`flex items-center justify-between border rounded-lg p-3 ${colors.bg}`}
+                            >
+                              <div className='flex items-center'>
+                                <div className='w-8 h-8 rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center mr-3'>
+                                  {index + 1}
+                                </div>
+                                <div>
+                                  <span className='font-mono'>{port.port}</span>
+                                  {serviceName && (
+                                    <span
+                                      className={`text-xs ml-2 ${colors.text}`}
+                                    >
+                                      {serviceName}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className='flex items-center gap-3'>
+                                <span className='text-sm'>
+                                  {port.packets.toLocaleString()} pkts
+                                </span>
+                                <span
+                                  className={`text-xs px-2 py-1 rounded-full ${colors.text} font-medium`}
+                                >
+                                  {port.percentage.toFixed(1)}%
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })
+                    )}
+
+                    {!loading &&
+                      displayData.port_stats.top_destinations?.length === 0 && (
+                        <div className='text-center text-muted-foreground py-4'>
+                          No port data available
+                        </div>
+                      )}
                   </div>
                 </div>
               )}
