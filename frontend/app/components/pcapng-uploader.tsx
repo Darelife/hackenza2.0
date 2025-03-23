@@ -171,15 +171,12 @@ export default function PcapngUploader() {
 
   return (
     <div className='relative w-full max-w-3xl mx-auto p-6'>
-      {/* Position the theme toggle in the top-right corner */}
-      <div className='absolute right-6 top-6'>
-        <ThemeToggle />
-      </div>
-
       <div className='mt-4 space-y-6'>
-        <h1 className='text-2xl font-bold text-center pt-2'>
-          Network Packet Analyzer
-        </h1>
+        {/* Title bar with theme toggle aligned */}
+        <div className='flex justify-between items-center pt-2'>
+          <h1 className='text-2xl font-bold'>Network Packet Analyzer</h1>
+          <ThemeToggle />
+        </div>
 
         <p className='text-center text-muted-foreground mb-6'>
           Upload a PCAPNG file to analyze network traffic patterns and protocols
