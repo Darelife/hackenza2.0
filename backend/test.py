@@ -40,6 +40,19 @@ class PacketAnalyzer:
             'device_patterns': defaultdict(list),
             'upload_patterns': []
         }
+        # Add new delay analysis categories
+        self.delay_analysis = {
+            'transmission_delays': defaultdict(list),
+            'processing_delays': defaultdict(list),
+            'queuing_delays': defaultdict(list),
+            'propagation_delays': defaultdict(list)
+        }
+        
+        self.delay_patterns = {
+            'congestion_events': [],
+            'jitter_events': [],
+            'aggregation_anomalies': []
+        }
         
     def basic_statistics(self):
         """Calculate basic packet statistics"""
@@ -171,16 +184,27 @@ class PacketAnalyzer:
                 # Only process TCP packets for bundling and packet loss analysis
                 if TCP in pkt and TCP in next_pkt:
                     flow = (pkt[IP].src, pkt[TCP].sport, pkt[IP].dst, pkt[TCP].dport)
-                    self.tcp_flows[flow].append((float(pkt.time), pkt[TCP].seq))
                     
-                    # Check for retransmissions
-                    if len(self.tcp_flows[flow]) > 1:
-                        if pkt[TCP].seq == self.tcp_flows[flow][-2][1]:
+                    # Check for retransmissions - UPDATED LOGIC
+                    if len(self.tcp_flows[flow]) > 0:
+                        last_seq = self.tcp_flows[flow][-1][1]
+                        current_seq = pkt[TCP].seq
+                        payload_len = len(pkt[TCP].payload)
+                        
+                        # Only count as retransmission if:
+                        # 1. Sequence number matches exactly
+                        # 2. Packet has payload (not just ACK)
+                        # 3. Not a keep-alive packet (zero window probe)
+                        if (current_seq == last_seq and 
+                            payload_len > 0 and 
+                            not (payload_len == 1 and pkt[TCP].window == 0)):
                             self.retransmissions.append({
                                 'time': float(pkt.time),
                                 'flow': flow,
-                                'seq': pkt[TCP].seq
+                                'seq': current_seq
                             })
+                    
+                    self.tcp_flows[flow].append((float(pkt.time), pkt[TCP].seq))
                     
                     # Check for bundling
                     if delay < 0.001:  # Less than 1ms
@@ -353,6 +377,155 @@ class PacketAnalyzer:
         
         return results
 
+    def analyze_delay_types(self):
+        """Analyze and categorize different types of delays"""
+        print("Analyzing delay types...")
+        
+        for i in range(len(self.packets)-1):
+            pkt = self.packets[i]
+            next_pkt = self.packets[i+1]
+            
+            if IP in pkt and IP in next_pkt:
+                delay = float(next_pkt.time) - float(pkt.time)
+                pkt_size = len(pkt)
+                proto = self._get_protocol(pkt)
+                
+                # Transmission delay (size-dependent)
+                transmission_delay = pkt_size * 0.00008  # Simplified calculation
+                self.delay_analysis['transmission_delays'][proto].append({
+                    'time': float(pkt.time),
+                    'delay': transmission_delay,
+                    'size': pkt_size
+                })
+                
+                # Processing delay (protocol-dependent)
+                if TCP in pkt:
+                    processing_delay = delay * 0.3  # Estimated TCP overhead
+                elif UDP in pkt:
+                    processing_delay = delay * 0.1  # Estimated UDP overhead
+                else:
+                    processing_delay = delay * 0.2  # Default overhead
+                
+                self.delay_analysis['processing_delays'][proto].append({
+                    'time': float(pkt.time),
+                    'delay': processing_delay,
+                    'type': proto
+                })
+                
+                # Queuing delay detection
+                if delay > 0.1:  # Threshold for potential queuing
+                    self.delay_analysis['queuing_delays'][proto].append({
+                        'time': float(pkt.time),
+                        'delay': delay,
+                        'size': pkt_size
+                    })
+                
+                # Detect congestion patterns
+                if len(self.delay_analysis['queuing_delays'][proto]) >= 3:
+                    recent_delays = [d['delay'] for d in self.delay_analysis['queuing_delays'][proto][-3:]]
+                    if all(d > 0.1 for d in recent_delays) and sum(recent_delays) > 0.5:
+                        self.delay_patterns['congestion_events'].append({
+                            'time': float(pkt.time),
+                            'protocol': proto,
+                            'avg_delay': sum(recent_delays) / 3
+                        })
+                
+                # Detect jitter
+                if len(self.latencies[proto]) >= 2:
+                    jitter = abs(self.latencies[proto][-1] - self.latencies[proto][-2])
+                    if jitter > 50:  # High jitter threshold (ms)
+                        self.delay_patterns['jitter_events'].append({
+                            'time': float(pkt.time),
+                            'protocol': proto,
+                            'jitter': jitter
+                        })
+
+    def analyze_delay_root_causes(self):
+        """Analyze root causes of delays by correlating various factors"""
+        print("Analyzing delay root causes...")
+        
+        # Initialize correlation data
+        correlation_data = {
+            'size_vs_delay': defaultdict(list),
+            'protocol_vs_delay': defaultdict(list),
+            'time_vs_delay': defaultdict(list)
+        }
+        
+        for proto in self.latencies:
+            for i, delay in enumerate(self.latencies[proto]):
+                timestamp = self.timestamps[proto][i]
+                pkt_size = self.packet_sizes[proto][i]
+                
+                correlation_data['size_vs_delay'][proto].append({
+                    'size': pkt_size,
+                    'delay': delay
+                })
+                
+                correlation_data['protocol_vs_delay'][proto].append(delay)
+                
+                correlation_data['time_vs_delay'][proto].append({
+                    'time': timestamp,
+                    'delay': delay
+                })
+        
+        return correlation_data
+
+    def plot_delay_analysis(self, output_dir):
+        """Generate visualizations for delay analysis"""
+        # 1. Delay Types Distribution
+        plt.figure(figsize=(12, 6))
+        for delay_type, delays in self.delay_analysis.items():
+            all_delays = []
+            for proto_delays in delays.values():
+                all_delays.extend([d['delay'] for d in proto_delays])
+            if all_delays:
+                sns.kdeplot(data=all_delays, label=delay_type.replace('_', ' ').title())
+        
+        plt.xlabel('Delay (ms)')
+        plt.ylabel('Density')
+        plt.title('Distribution of Different Delay Types')
+        plt.legend()
+        plt.savefig(f'{output_dir}/delay_types_distribution.png')
+        plt.close()
+        
+        # 2. Delay Patterns Timeline
+        plt.figure(figsize=(15, 8))
+        
+        # Plot congestion events
+        congestion_times = [event['time'] for event in self.delay_patterns['congestion_events']]
+        congestion_delays = [event['avg_delay'] for event in self.delay_patterns['congestion_events']]
+        plt.scatter(congestion_times, congestion_delays, label='Congestion Events', color='red', alpha=0.6)
+        
+        # Plot jitter events
+        jitter_times = [event['time'] for event in self.delay_patterns['jitter_events']]
+        jitter_values = [event['jitter'] for event in self.delay_patterns['jitter_events']]
+        plt.scatter(jitter_times, jitter_values, label='High Jitter Events', color='orange', alpha=0.6)
+        
+        plt.xlabel('Time (seconds)')
+        plt.ylabel('Delay/Jitter (ms)')
+        plt.title('Network Events Timeline')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(f'{output_dir}/delay_patterns_timeline.png')
+        plt.close()
+        
+        # 3. Root Cause Correlation
+        correlation_data = self.analyze_delay_root_causes()
+        
+        # Size vs Delay correlation
+        plt.figure(figsize=(12, 6))
+        for proto, data in correlation_data['size_vs_delay'].items():
+            sizes = [d['size'] for d in data]
+            delays = [d['delay'] for d in data]
+            plt.scatter(sizes, delays, label=proto, alpha=0.5)
+        
+        plt.xlabel('Packet Size (bytes)')
+        plt.ylabel('Delay (ms)')
+        plt.title('Packet Size vs Delay Correlation')
+        plt.legend()
+        plt.savefig(f'{output_dir}/size_delay_correlation.png')
+        plt.close()
+
     def generate_reports(self):
         """Generate comprehensive analysis reports"""
         # Create output directory
@@ -371,6 +544,10 @@ class PacketAnalyzer:
         
         # 4. Delay Categories Analysis
         self._plot_delay_categories(output_dir)
+        
+        # Add delay analysis
+        self.analyze_delay_types()
+        self.plot_delay_analysis(output_dir)
         
         # 5. Generate text report
         self._generate_text_report(output_dir)
@@ -645,6 +822,45 @@ class PacketAnalyzer:
                 f.write(f"    Small Packets: {small_pkts}\n")
                 f.write(f"    Bundled Packets: {bundle_pkts}\n")
 
+            # Add delay analysis
+            f.write("\n=== Detailed Delay Analysis ===\n")
+            
+            # Delay Types Summary
+            f.write("\nDelay Type Statistics:\n")
+            for delay_type, delays in self.delay_analysis.items():
+                f.write(f"\n{delay_type.replace('_', ' ').title()}:\n")
+                for proto, proto_delays in delays.items():
+                    if proto_delays:
+                        avg_delay = np.mean([d['delay'] for d in proto_delays])
+                        max_delay = max([d['delay'] for d in proto_delays])
+                        f.write(f"  {proto}:\n")
+                        f.write(f"    Average: {avg_delay:.2f} ms\n")
+                        f.write(f"    Maximum: {max_delay:.2f} ms\n")
+                        f.write(f"    Count: {len(proto_delays)}\n")
+            
+            # Network Events
+            f.write("\nNetwork Events:\n")
+            f.write(f"Congestion Events: {len(self.delay_patterns['congestion_events'])}\n")
+            f.write(f"High Jitter Events: {len(self.delay_patterns['jitter_events'])}\n")
+            
+            # Root Cause Analysis
+            f.write("\nRoot Cause Analysis:\n")
+            correlation_data = self.analyze_delay_root_causes()
+            for proto in correlation_data['protocol_vs_delay']:
+                delays = correlation_data['protocol_vs_delay'][proto]
+                if delays:
+                    f.write(f"\n{proto}:\n")
+                    f.write(f"  Average Delay: {np.mean(delays):.2f} ms\n")
+                    f.write(f"  Delay Variation: {np.std(delays):.2f} ms\n")
+                    
+                    # Size correlation
+                    size_data = correlation_data['size_vs_delay'][proto]
+                    sizes = [d['size'] for d in size_data]
+                    size_delays = [d['delay'] for d in size_data]
+                    if len(sizes) > 1:
+                        correlation = np.corrcoef(sizes, size_delays)[0,1]
+                        f.write(f"  Size-Delay Correlation: {correlation:.2f}\n")
+
     def get_capture_overview(self):
         """Generate a comprehensive overview of the capture file"""
         overview = {
@@ -752,7 +968,7 @@ class PacketAnalyzer:
             print(f"  Port {port:<6} : {count:>6} packets ({percentage:>6.2f}%)")
 
 def main():
-    pcap_file = "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng"  # Replace with your pcap file
+    pcap_file = "/home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-rpi-60ms.pcapng"  # Replace with your pcap file
     
     print(f"Analyzing {pcap_file}...")
     analyzer = PacketAnalyzer(pcap_file)
