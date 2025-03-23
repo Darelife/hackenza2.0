@@ -980,7 +980,8 @@ class PacketAnalyzer:
             print(f"  Port {port:<6} : {count:>6} packets ({percentage:>6.2f}%)")
 
 def main():
-    pcap_file = "/home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-rpi-60ms.pcapng"  # Replace with your pcap file
+    # Use relative path from the script's location
+    pcap_file = os.path.join(os.path.dirname(__file__), "pcapngFiles", "28-1-25-bro-rpi-60ms.pcapng")
     
     print(f"Analyzing {pcap_file}...")
     analyzer = PacketAnalyzer(pcap_file)
