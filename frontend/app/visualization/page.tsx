@@ -43,7 +43,10 @@ export default function VisualizationPage() {
           // Based on your sample JSON, the data is nested in a "data" property
           if (jsonData && jsonData.data) {
             setLatencyData(jsonData.data);
-            console.log('Data loaded successfully:', Object.keys(jsonData.data));
+            console.log(
+              'Data loaded successfully:',
+              Object.keys(jsonData.data),
+            );
           } else {
             throw new Error('Invalid JSON structure: missing data property');
           }

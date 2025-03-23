@@ -18,6 +18,11 @@ import { useEffect, useState } from 'react';
 import { DataCard } from '../components/data-card';
 import { DataTable } from '../components/protocol-table';
 import { ThemeToggle } from '../components/theme-toggle';
+import {
+  CaptureDurationCard,
+  PacketCountCard,
+  PacketSizeCard,
+} from '../components/data-card';
 
 // Define interfaces for protocol data
 interface ProtocolData {
@@ -432,29 +437,20 @@ export default function Page() {
               </p>
             </div>
           )}
-
           <div className='grid auto-rows-min gap-4 md:grid-cols-3 lg:grid-cols-3'>
-            <DataCard
-              title='Packet Count'
-              value={displayData.total_packets.toLocaleString()}
+            <PacketCountCard
+              value={displayData.total_packets}
               isLoading={loading}
             />
-            <DataCard
-              title='Avg Packet Size'
-              value={`${Math.round(
-                displayData.stats?.avg_packet_size || 0,
-              )} bytes`}
+            <PacketSizeCard
+              value={displayData.stats?.avg_packet_size || 0}
               isLoading={loading}
             />
-            <DataCard
-              title='Capture Duration'
-              value={`${(displayData.stats?.capture_duration || 0).toFixed(
-                2,
-              )}s`}
+            <CaptureDurationCard
+              value={displayData.stats?.capture_duration || 0}
               isLoading={loading}
             />
           </div>
-
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div className='rounded-xl bg-muted/50 p-4'>
               <DataTable
@@ -481,8 +477,234 @@ export default function Page() {
               />
             </div>
           </div>
+          {/* Add Jitter Analysis Section */}
+          {data?.analysis?.jitter &&
+            Object.keys(data.analysis.jitter).length > 0 && (
+              <div className='rounded-xl bg-muted/50 p-6 mt-4'>
+                <h3 className='text-lg font-medium mb-4'>
+                  Network Jitter Analysis
+                </h3>
 
-          {/* Add Network Delay Analysis */}
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  {Object.entries(data.analysis.jitter)
+                    .sort((a, b) => b[1].avg - a[1].avg) // Sort by average jitter value (highest first)
+                    .map(([protocol, stats]) => {
+                      // Calculate jitter severity
+                      const severityClass =
+                        stats.avg < 10
+                          ? 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : stats.avg < 100
+                          ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                          : 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+
+                      const severityText =
+                        stats.avg < 10
+                          ? 'text-green-800 dark:text-green-400'
+                          : stats.avg < 100
+                          ? 'text-yellow-800 dark:text-yellow-400'
+                          : 'text-red-800 dark:text-red-400';
+
+                      return (
+                        <div
+                          key={protocol}
+                          className={`border rounded-lg p-4 ${severityClass}`}
+                        >
+                          <div className='flex justify-between items-center'>
+                            <h4 className='font-medium'>{protocol}</h4>
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full ${severityText} font-medium`}
+                            >
+                              {stats.avg < 10
+                                ? 'Low'
+                                : stats.avg < 100
+                                ? 'Medium'
+                                : 'High'}{' '}
+                              Jitter
+                            </span>
+                          </div>
+
+                          <div className='space-y-2 mt-3'>
+                            <div className='flex justify-between text-sm'>
+                              <span>Average</span>
+                              <span className='font-medium'>
+                                {stats.avg.toFixed(2)} ms
+                              </span>
+                            </div>
+                            <div className='flex justify-between text-sm'>
+                              <span>Maximum</span>
+                              <span>{stats.max.toFixed(2)} ms</span>
+                            </div>
+                            <div className='flex justify-between text-sm'>
+                              <span>Minimum</span>
+                              <span>{stats.min.toFixed(2)} ms</span>
+                            </div>
+                            <div className='flex justify-between text-sm'>
+                              <span>Variability</span>
+                              <span>±{stats.std.toFixed(2)} ms</span>
+                            </div>
+                            <div className='mt-3'>
+                              <div className='w-full bg-white/50 dark:bg-black/20 rounded-full h-1.5'>
+                                <div
+                                  className='bg-primary h-1.5 rounded-full'
+                                  style={{
+                                    width: `${Math.min(
+                                      100,
+                                      (stats.avg / 50) * 100,
+                                    )}%`,
+                                  }}
+                                ></div>
+                              </div>
+                              <div className='flex justify-between text-xs text-muted-foreground mt-1'>
+                                <span>0 ms</span>
+                                <span>50+ ms</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                <div className='mt-4 text-sm text-muted-foreground'>
+                  <p>
+                    <strong>Jitter</strong> represents the variation in packet
+                    delay. High jitter can cause issues with real-time
+                    communications and streaming applications.
+                  </p>
+                </div>
+              </div>
+            )}
+          {/* Add Packet Loss Summary if available */}
+          {data?.analysis?.packet_loss && data.analysis.packet_loss.overall && (
+            <div className='rounded-xl bg-muted/50 p-6 mt-4'>
+              <h3 className='text-lg font-medium mb-4'>Packet Loss Analysis</h3>
+
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                <div className='border rounded-lg p-4 bg-card'>
+                  <h4 className='font-medium mb-3'>Overall Packet Loss</h4>
+
+                  <div className='flex items-center gap-4 mb-4'>
+                    <div
+                      className={`text-2xl font-bold ${
+                        data.analysis.packet_loss.overall.loss_percentage < 0.1
+                          ? 'text-green-500'
+                          : data.analysis.packet_loss.overall.loss_percentage <
+                            1
+                          ? 'text-yellow-500'
+                          : 'text-red-500'
+                      }`}
+                    >
+                      {data.analysis.packet_loss.overall.loss_percentage.toFixed(
+                        2,
+                      )}
+                      %
+                    </div>
+                    <div className='text-sm text-muted-foreground'>
+                      {data.analysis.packet_loss.overall.loss_events} loss
+                      events detected
+                    </div>
+                  </div>
+
+                  <div className='w-full bg-secondary rounded-full h-2.5 mb-1'>
+                    <div
+                      className={`h-2.5 rounded-full ${
+                        data.analysis.packet_loss.overall.loss_percentage < 0.1
+                          ? 'bg-green-500'
+                          : data.analysis.packet_loss.overall.loss_percentage <
+                            1
+                          ? 'bg-yellow-500'
+                          : 'bg-red-500'
+                      }`}
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          data.analysis.packet_loss.overall.loss_percentage *
+                            10,
+                        )}%`,
+                      }}
+                    ></div>
+                  </div>
+                  <div className='flex justify-between text-xs text-muted-foreground'>
+                    <span>0%</span>
+                    <span>10%+</span>
+                  </div>
+
+                  <div className='mt-4 text-sm space-y-1'>
+                    <div className='flex justify-between'>
+                      <span>Total Packets</span>
+                      <span>
+                        {data.analysis.packet_loss.overall.total_transmitted?.toLocaleString() ||
+                          'N/A'}
+                      </span>
+                    </div>
+                    <div className='flex justify-between'>
+                      <span>Lost Packets</span>
+                      <span>
+                        {data.analysis.packet_loss.overall.total_lost_packets?.toLocaleString() ||
+                          'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className='border rounded-lg p-4 bg-card'>
+                  <h4 className='font-medium mb-3'>Protocol-Specific Loss</h4>
+
+                  <div className='space-y-3 max-h-[200px] overflow-y-auto'>
+                    {Object.entries(data.analysis.packet_loss.per_protocol)
+                      .filter(([_, stats]) => stats.loss_percentage > 0)
+                      .sort(
+                        (a, b) => b[1].loss_percentage - a[1].loss_percentage,
+                      )
+                      .map(([protocol, stats]) => (
+                        <div
+                          key={protocol}
+                          className='flex items-center justify-between'
+                        >
+                          <div className='flex items-center gap-2'>
+                            <div className='w-2 h-2 rounded-full bg-primary'></div>
+                            <span>{protocol}</span>
+                          </div>
+                          <div className='flex items-center gap-3'>
+                            <span className='text-sm'>
+                              {stats.loss_percentage.toFixed(2)}%
+                            </span>
+                            <div className='w-16 bg-secondary rounded-full h-1.5'>
+                              <div
+                                className={`h-1.5 rounded-full ${
+                                  stats.loss_percentage < 0.1
+                                    ? 'bg-green-500'
+                                    : stats.loss_percentage < 1
+                                    ? 'bg-yellow-500'
+                                    : 'bg-red-500'
+                                }`}
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    stats.loss_percentage * 10,
+                                  )}%`,
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                    {Object.entries(
+                      data.analysis.packet_loss.per_protocol,
+                    ).filter(([_, stats]) => stats.loss_percentage > 0)
+                      .length === 0 && (
+                      <div className='text-center text-muted-foreground py-4'>
+                        No packet loss detected for any protocol
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Network Delay Analysis with colorful cards */}
           {displayData.delay_categories &&
             Object.keys(displayData.delay_categories).length > 0 && (
               <div className='rounded-xl bg-muted/50 p-6 mt-4'>
@@ -504,16 +726,55 @@ export default function Page() {
                         )
                         .join(' ');
 
+                      // Determine severity based on average delay
+                      const getSeverity = (avg: number) => {
+                        if (avg > 1000)
+                          return 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+                        if (avg > 100)
+                          return 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
+                        if (avg > 10)
+                          return 'bg-orange-100 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800';
+                        return 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+                      };
+
+                      const getTextColor = (avg: number) => {
+                        if (avg > 1000) return 'text-red-800 dark:text-red-400';
+                        if (avg > 100)
+                          return 'text-yellow-800 dark:text-yellow-400';
+                        if (avg > 10)
+                          return 'text-orange-800 dark:text-orange-400';
+                        return 'text-green-800 dark:text-green-400';
+                      };
+
+                      const severityClass = getSeverity(stats.avg);
+                      const textColorClass = getTextColor(stats.avg);
+
                       return (
                         <div
                           key={category}
-                          className='border rounded-lg p-4 bg-card'
+                          className={`border rounded-lg p-4 ${severityClass}`}
                         >
-                          <h4 className='font-medium mb-2'>{title}</h4>
+                          <div className='flex justify-between items-center mb-2'>
+                            <h4 className='font-medium'>{title}</h4>
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full ${textColorClass} font-medium`}
+                            >
+                              {stats.avg < 0.1
+                                ? 'Minimal'
+                                : stats.avg < 10
+                                ? 'Low'
+                                : stats.avg < 100
+                                ? 'Medium'
+                                : 'High'}{' '}
+                              Delay
+                            </span>
+                          </div>
                           <div className='space-y-2'>
                             <div className='flex justify-between text-sm'>
                               <span>Average</span>
-                              <span>{stats.avg.toFixed(2)} ms</span>
+                              <span className='font-medium'>
+                                {stats.avg.toFixed(2)} ms
+                              </span>
                             </div>
                             <div className='flex justify-between text-sm'>
                               <span>Maximum</span>
@@ -521,7 +782,24 @@ export default function Page() {
                             </div>
                             <div className='flex justify-between text-sm'>
                               <span>Occurrences</span>
-                              <span>{stats.count}</span>
+                              <span>{stats.count.toLocaleString()}</span>
+                            </div>
+                            <div className='mt-3'>
+                              <div className='w-full bg-white/50 dark:bg-black/20 rounded-full h-1.5'>
+                                <div
+                                  className='bg-primary h-1.5 rounded-full'
+                                  style={{
+                                    width: `${Math.min(
+                                      100,
+                                      (stats.avg / (stats.max / 2)) * 100,
+                                    )}%`,
+                                  }}
+                                ></div>
+                              </div>
+                              <div className='flex justify-between text-xs text-muted-foreground mt-1'>
+                                <span>0 ms</span>
+                                <span>{Math.round(stats.max / 2)} ms</span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -623,6 +901,41 @@ export default function Page() {
               )}
             </div>
           )}
+
+          {/* Add Capture Time Information */}
+          {data?.overview?.time_range &&
+            (data.overview.time_range.start > 0 ||
+              data.overview.time_range.end > 0) && (
+              <div className='rounded-xl bg-muted/50 p-4 mt-4'>
+                <h3 className='text-lg font-medium mb-3'>
+                  Capture Time Information
+                </h3>
+
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div className='border rounded-lg p-4 bg-card'>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-sm'>Start Time</span>
+                      <span className='font-medium'>
+                        {new Date(
+                          data.overview.time_range.start * 1000,
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className='border rounded-lg p-4 bg-card'>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-sm'>End Time</span>
+                      <span className='font-medium'>
+                        {new Date(
+                          data.overview.time_range.end * 1000,
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
           {error && (
             <div className='rounded-xl bg-destructive/10 p-4 text-destructive'>
