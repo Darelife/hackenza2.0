@@ -1,0 +1,35 @@
+name: Python Run Check
+
+on: [push, pull_request]  # Runs on every push and PR
+
+jobs:
+  run-python-script:
+    runs-on: ubuntu-latest  # Use a Linux runner
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4  # Fetches your code
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'  # Use latest Python 3 version
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install scapy matplotlib numpy seaborn
+          python -c "import scapy; import matplotlib; import numpy; import seaborn; print('Dependencies installed successfully!')"
+
+      - name: List PCAPNG Files
+        run: |
+          ls -l backend/pcapngFiles/
+          echo "Available PCAPNG files for testing:"
+          find backend/pcapngFiles/ -name "*.pcapng*"
+          # Verify PCAP file exists
+          test -f backend/pcapngFiles/28-1-25-bro-rpi-60ms.pcapng || exit 1
+
+      - name: Run Test Script
+        run: |
+          cd backend
+          python test.py
