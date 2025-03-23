@@ -92,20 +92,24 @@ class PacketAnalyzer:
             # Update transmitted count for protocol
             self.packet_loss_stats['protocol_stats'][proto]['transmitted'] += 1
             
-            # Calculate basic latency
-            latency = (float(next_pkt.time) - float(pkt.time)) * 1000
+            # Calculate basic latency (ensure non-negative)
+            latency = max(0, (float(next_pkt.time) - float(pkt.time)) * 1000)
             self.latencies[proto].append(latency)
             self.timestamps[proto].append(float(pkt.time))
-            self.packet_sizes[proto].append(len(pkt))
             
-            # Calculate jitter (variation in delay)
+            # Ensure packet size is non-negative
+            packet_size = max(0, len(pkt))
+            self.packet_sizes[proto].append(packet_size)
+            
+            # Calculate jitter (already using abs, but ensure base values are non-negative)
             if len(self.latencies[proto]) > 1:
-                jitter = abs(latency - self.latencies[proto][-2])
+                prev_latency = max(0, self.latencies[proto][-2])
+                jitter = abs(latency - prev_latency)
                 self.jitter_values[proto].append(jitter)
             
             # Only process IP packets for delay categories
             if IP in pkt and IP in next_pkt:
-                delay = float(next_pkt.time) - float(pkt.time)
+                delay = max(0, float(next_pkt.time) - float(pkt.time))  # Ensure non-negative
                 
                 # Analyze IoT-specific patterns
                 if TCP in pkt:
@@ -121,8 +125,8 @@ class PacketAnalyzer:
                         if payload_size < 100:
                             self.delay_categories['device_to_broker_delays'].append({
                                 'time': float(pkt.time),
-                                'delay': delay * 1000,
-                                'size': payload_size,
+                                'delay': max(0, delay * 1000),  # Ensure non-negative
+                                'size': max(0, payload_size),
                                 'flow': flow
                             })
                         
@@ -130,8 +134,8 @@ class PacketAnalyzer:
                         if payload_size > 1000:  # Threshold for bundled data
                             self.delay_categories['broker_aggregation_delays'].append({
                                 'time': float(pkt.time),
-                                'delay': delay * 1000,
-                                'size': payload_size,
+                                'delay': max(0, delay * 1000),  # Ensure non-negative
+                                'size': max(0, payload_size),
                                 'flow': flow
                             })
                             
@@ -154,8 +158,8 @@ class PacketAnalyzer:
                             len(self.tcp_flows[flow]) > 5):  # Sustained flow
                             self.delay_categories['cloud_upload_delays'].append({
                                 'time': float(pkt.time),
-                                'delay': delay * 1000,
-                                'size': payload_size,
+                                'delay': max(0, delay * 1000),  # Ensure non-negative
+                                'size': max(0, payload_size),
                                 'flow': flow
                             })
                             
@@ -165,18 +169,18 @@ class PacketAnalyzer:
                                 'flow': flow
                             })
                         
-                        # Track device transmission patterns
-                        self.iot_metrics['device_patterns'][pkt[IP].src].append({
-                            'time': float(pkt.time),
-                            'size': payload_size,
-                            'type': 'small' if payload_size < 100 else 'bundle'
-                        })
+                            # Track device transmission patterns
+                            self.iot_metrics['device_patterns'][pkt[IP].src].append({
+                                'time': float(pkt.time),
+                                'size': payload_size,
+                                'type': 'small' if payload_size < 100 else 'bundle'
+                            })
                 
                 # Classify delays
                 if delay > 0.1:  # More than 100ms
                     self.delay_categories['broker_processing_delays'].append({
                         'time': float(pkt.time),
-                        'delay': delay * 1000,  # Convert to ms
+                        'delay': max(0, delay * 1000),  # Ensure non-negative
                         'src': pkt[IP].src,
                         'dst': pkt[IP].dst
                     })
@@ -210,7 +214,7 @@ class PacketAnalyzer:
                     if delay < 0.001:  # Less than 1ms
                         self.delay_categories['bundling_delays'].append({
                             'time': float(pkt.time),
-                            'delay': delay * 1000
+                            'delay': max(0, delay * 1000)  # Ensure non-negative
                         })
                     
                     # Analyze sequence numbers for packet loss - Updated logic
@@ -485,6 +489,7 @@ class PacketAnalyzer:
         plt.ylabel('Density')
         plt.title('Distribution of Different Delay Types')
         plt.legend()
+        plt.xlim(left=0)
         plt.savefig(f'{output_dir}/delay_types_distribution.png')
         plt.close()
         
@@ -537,7 +542,7 @@ class PacketAnalyzer:
         self._plot_latency_timeline(output_dir)
         
         # 2. Jitter Analysis
-        self._plot_jitter_analysis(output_dir)
+        self._plot_jitter_distribution(output_dir)
         
         # 3. Packet Size Analysis
         self._plot_packet_size_distribution(output_dir)
@@ -554,38 +559,75 @@ class PacketAnalyzer:
 
     def _plot_latency_distribution(self, output_dir):
         plt.figure(figsize=(12, 6))
-        for proto in self.latencies:
-            sns.kdeplot(data=self.latencies[proto], label=proto)
+        
+        # Create both txt and csv files
+        with open(f'{output_dir}/latency_distribution_coordinates.txt', 'w') as txt_file, \
+             open(f'{output_dir}/latency_distribution_coordinates.csv', 'w') as csv_file:
+            
+            # Write headers
+            txt_file.write("Protocol\tX-coordinate\tY-coordinate\n")
+            csv_file.write("Protocol,X-coordinate,Y-coordinate\n")
+            
+            for proto in self.latencies:
+                # Filter out negative latencies
+                positive_latencies = [lat for lat in self.latencies[proto] if lat >= 0]
+                if positive_latencies:
+                    kde = sns.kdeplot(data=positive_latencies, label=proto)
+                    
+                    line = kde.lines[-1]
+                    xdata = line.get_xdata()
+                    ydata = line.get_ydata()
+                    
+                    # Write coordinates to both files
+                    for x, y in zip(xdata, ydata):
+                        if x >= 0:
+                            txt_file.write(f"{proto}\t{x:.6f}\t{y:.6f}\n")
+                            csv_file.write(f"{proto},{x:.6f},{y:.6f}\n")
+                    
+                    # Add separator between protocols
+                    txt_file.write("\n")
+                    csv_file.write("\n")
+        
         plt.xlabel('Latency (ms)')
         plt.ylabel('Density')
         plt.title('Latency Distribution by Protocol')
         plt.legend()
+        plt.xlim(left=0)  # Force x-axis to start at 0
         plt.savefig(f'{output_dir}/latency_distribution.png')
         plt.close()
 
     def _plot_latency_timeline(self, output_dir):
         plt.figure(figsize=(15, 7))
         for proto in self.latencies:
-            plt.plot(self.timestamps[proto], self.latencies[proto], 
-                    label=proto, alpha=0.7, marker='.')
+            # Filter out negative latencies
+            positive_data = [(t, l) for t, l in zip(self.timestamps[proto], self.latencies[proto]) if l >= 0]
+            if positive_data:
+                timestamps, latencies = zip(*positive_data)
+                plt.plot(timestamps, latencies, label=proto, alpha=0.7, marker='.')
+        
         plt.xlabel('Time (seconds)')
         plt.ylabel('Latency (ms)')
         plt.title('Packet Latency Timeline')
         plt.legend()
         plt.grid(True)
+        plt.ylim(bottom=0)  # Force y-axis to start at 0
         plt.savefig(f'{output_dir}/latency_timeline.png')
         plt.close()
 
-    def _plot_jitter_analysis(self, output_dir):
+    def _plot_jitter_distribution(self, output_dir):
         plt.figure(figsize=(12, 6))
         for proto in self.jitter_values:
-            if self.jitter_values[proto]:
-                sns.kdeplot(data=self.jitter_values[proto], label=proto)
+            # Jitter values should already be non-negative (abs), but let's ensure
+            jitter_values = [j for j in self.jitter_values[proto] if j >= 0]
+            if jitter_values:
+                sns.kdeplot(data=jitter_values, label=proto)
+        
         plt.xlabel('Jitter (ms)')
         plt.ylabel('Density')
         plt.title('Jitter Distribution by Protocol')
         plt.legend()
-        plt.savefig(f'{output_dir}/jitter_analysis.png')
+        plt.xlim(left=0)  # Force x-axis to start at 0
+        plt.savefig(f'{output_dir}/jitter_distribution.png')
         plt.close()
 
     def _plot_packet_size_distribution(self, output_dir):
@@ -593,11 +635,12 @@ class PacketAnalyzer:
         has_data = False
         
         for proto in self.packet_sizes:
-            sizes = self.packet_sizes[proto]
-            if len(sizes) > 1 and np.var(sizes) > 0:  # Check if we have varying data
+            # Ensure all packet sizes are non-negative
+            sizes = [size for size in self.packet_sizes[proto] if size >= 0]
+            if len(sizes) > 1 and np.var(sizes) > 0:
                 sns.kdeplot(data=sizes, label=f"{proto} (n={len(sizes)})")
                 has_data = True
-            elif len(sizes) > 0:  # If we have data but no variance
+            elif len(sizes) > 0:
                 avg_size = np.mean(sizes)
                 plt.axvline(x=avg_size, label=f"{proto} (constant {avg_size:.0f} bytes, n={len(sizes)})", 
                            linestyle='--')
@@ -608,6 +651,7 @@ class PacketAnalyzer:
             plt.ylabel('Density')
             plt.title('Packet Size Distribution by Protocol')
             plt.legend()
+            plt.xlim(left=0)  # Force x-axis to start at 0
         else:
             plt.text(0.5, 0.5, 'No packet size data available', 
                     horizontalalignment='center', verticalalignment='center')
@@ -616,55 +660,23 @@ class PacketAnalyzer:
         plt.close()
 
     def _plot_delay_categories(self, output_dir):
-        """Plot delay categories distribution"""
-        plt.figure(figsize=(15, 8))
-        
-        # Create subplots for different delay categories
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10))
-        
-        # Plot delay distributions
-        colors = ['blue', 'green', 'red', 'orange']
-        categories = ['bundling_delays', 'broker_processing_delays', 
-                     'retransmission_delays', 'network_delays']
-        
-        for cat, color in zip(categories, colors):
-            delays = [d['delay'] for d in self.delay_categories[cat]]
+        plt.figure(figsize=(15, 7))
+        for category, delays in self.delay_categories.items():
             if delays:
-                sns.kdeplot(data=delays, ax=ax1, label=cat.replace('_', ' ').title(), color=color)
+                # Filter out negative delays
+                positive_delays = [d['delay'] for d in delays if d['delay'] >= 0]
+                if positive_delays:
+                    plt.boxplot(positive_delays, positions=[list(self.delay_categories.keys()).index(category)],
+                              labels=[category.replace('_', ' ').title()])
         
-        ax1.set_xlabel('Delay (ms)')
-        ax1.set_ylabel('Density')
-        ax1.set_title('Delay Categories Distribution')
-        ax1.legend()
-        
-        # Plot delay timeline
-        for cat, color in zip(categories, colors):
-            delays = self.delay_categories[cat]
-            if delays:
-                times = [d['time'] for d in delays]
-                values = [d['delay'] for d in delays]
-                ax2.scatter(times, values, label=cat.replace('_', ' ').title(), 
-                          color=color, alpha=0.6, s=30)
-        
-        # Add packet loss indicators if available - FIXED VERSION
-        if self.packet_loss_stats['loss_timestamps']:
-            # Flatten all timestamps from all protocols into a single list
-            all_timestamps = []
-            for proto_timestamps in self.packet_loss_stats['loss_timestamps'].values():
-                all_timestamps.extend(proto_timestamps)
-            
-            if all_timestamps:  # Only plot if we have timestamps
-                ax2.vlines(all_timestamps,
-                          ax2.get_ylim()[0], ax2.get_ylim()[1],
-                          colors='red', linestyles='dashed', label='Packet Loss Events')
-        
-        ax2.set_xlabel('Time (seconds)')
-        ax2.set_ylabel('Delay (ms)')
-        ax2.set_title('Delay Categories Timeline')
-        ax2.legend()
-        
+        plt.xlabel('Delay Category')
+        plt.ylabel('Delay (ms)')
+        plt.title('Delay Distribution by Category')
+        plt.xticks(rotation=45)
+        plt.grid(True)
+        plt.ylim(bottom=0)  # Force y-axis to start at 0
         plt.tight_layout()
-        plt.savefig(f'{output_dir}/delay_categories_analysis.png')
+        plt.savefig(f'{output_dir}/delay_categories.png')
         plt.close()
 
     def _generate_text_report(self, output_dir):
@@ -968,7 +980,7 @@ class PacketAnalyzer:
             print(f"  Port {port:<6} : {count:>6} packets ({percentage:>6.2f}%)")
 
 def main():
-    pcap_file = "/Users/harsh/Desktop/hackenza2.0/backend/pcapngFiles/28-1-25-bro-rpi-60ms.pcapng"  # Replace with your pcap file
+    pcap_file = "/home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-rpi-60ms.pcapng"  # Replace with your pcap file
     
     print(f"Analyzing {pcap_file}...")
     analyzer = PacketAnalyzer(pcap_file)
