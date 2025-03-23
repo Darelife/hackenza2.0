@@ -320,65 +320,156 @@ export default function Page() {
   }, [data]);
 
   // Load data either from localStorage (if user uploaded a file) or from the API
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       setLoading(true);
+
+  //       // Check if we have analysis data in localStorage
+  //       if (typeof window !== 'undefined') {
+  //         const savedAnalysis = localStorage.getItem('analysisData');
+
+  //         if (savedAnalysis) {
+  //           try {
+  //             const parsedAnalysis = JSON.parse(savedAnalysis);
+  //             setAnalysisInfo({
+  //               originalFilename: parsedAnalysis.originalFilename,
+  //               timestamp: parsedAnalysis.timestamp,
+  //             });
+
+  //             // Store raw data as-is
+  //             setData(parsedAnalysis.data);
+  //             console.log('Data from localStorage:', parsedAnalysis.data);
+  //             setError(null);
+  //             return; // Exit early since we have data
+  //           } catch (e) {
+  //             console.error('Error parsing analysis data:', e);
+  //             // Fall through to API request if parsing fails
+  //           }
+  //         }
+  //       }
+
+  //       // If we don't have localStorage data, fetch from API
+  //       const response = await fetch(`${API_BASE_URL}/api/analyzeOverview`);
+
+  //       // save the response to local storage
+  //       const data = await response.json();
+  //       localStorage.setItem('analysisData', JSON.stringify(data));
+
+  //       if (!response.ok) {
+  //         throw new Error(`API Error: ${response.status}`);
+  //       }
+
+  //       const apiData = await response.json();
+  //       console.log('API response:', apiData);
+
+  //       // Store the raw API data
+  //       setData(apiData);
+  //       setError(null);
+  //     } catch (err) {
+  //       console.error('Failed to fetch data:', err);
+  //       setError(err instanceof Error ? err.message : 'Unknown error occurred');
+  //       // Fall back to sample data
+  //       setData(sampleData);
+  //     } finally {
+  //       setTimeout(() => setLoading(false), 500);
+  //     }
+  //   };
+
+  //   fetchData();
+  // }, []);
+
+  // Inside your useEffect where data is fetched:
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Check if we have analysis data in localStorage
-        if (typeof window !== 'undefined') {
-          const savedAnalysis = localStorage.getItem('analysisData');
+        // Get metadata from localStorage (small data)
+        const metadataString = localStorage.getItem('analysisMetadata');
 
-          if (savedAnalysis) {
-            try {
-              const parsedAnalysis = JSON.parse(savedAnalysis);
-              setAnalysisInfo({
-                originalFilename: parsedAnalysis.originalFilename,
-                timestamp: parsedAnalysis.timestamp,
-              });
+        if (metadataString) {
+          const metadata = JSON.parse(metadataString);
+          setAnalysisInfo(metadata);
 
-              // Store raw data as-is
-              setData(parsedAnalysis.data);
-              console.log('Data from localStorage:', parsedAnalysis.data);
+          // Try to get data from CacheStorage
+          try {
+            const cache = await caches.open('packet-analysis-data');
+            const response = await cache.match('/analysis-data');
+
+            if (response) {
+              const cacheData = await response.json();
+              console.log('Data retrieved from CacheStorage:', cacheData);
+
+              // Just set the data directly - don't try to set packet arrays that don't exist
+              setData(cacheData);
               setError(null);
               return; // Exit early since we have data
-            } catch (e) {
-              console.error('Error parsing analysis data:', e);
-              // Fall through to API request if parsing fails
             }
+          } catch (cacheError) {
+            console.error(
+              'Error retrieving data from CacheStorage:',
+              cacheError,
+            );
+            // Continue to fallback methods
           }
         }
 
-        // If we don't have localStorage data, fetch from API
-        const response = await fetch(`${API_BASE_URL}/api/analyzeOverview`);
+        // If CacheStorage failed, try the API
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/analyzeOverview`);
 
-        // save the response to local storage
-        const data = await response.json();
-        localStorage.setItem('analysisData', JSON.stringify(data));
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+          }
 
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.status}`);
+          const apiData = await response.json();
+          console.log('API response:', apiData);
+
+          // Store the API response in CacheStorage for future use
+          try {
+            const cache = await caches.open('packet-analysis-data');
+            const jsonResponse = new Response(JSON.stringify(apiData), {
+              headers: { 'Content-Type': 'application/json' },
+            });
+            await cache.put('/analysis-data', jsonResponse);
+
+            // Store metadata in localStorage
+            if (!metadataString) {
+              localStorage.setItem(
+                'analysisMetadata',
+                JSON.stringify({
+                  originalFilename: 'API Data',
+                  timestamp: new Date().toISOString(),
+                }),
+              );
+            }
+          } catch (cacheError) {
+            console.error(
+              'Error storing API data in CacheStorage:',
+              cacheError,
+            );
+          }
+
+          // Set the data directly
+          setData(apiData);
+          setError(null);
+        } catch (apiErr) {
+          console.error('API fetch failed:', apiErr);
+          throw new Error(`Failed to fetch data: ${apiErr.message}`);
         }
-
-        const apiData = await response.json();
-        console.log('API response:', apiData);
-
-        // Store the raw API data
-        setData(apiData);
-        setError(null);
       } catch (err) {
         console.error('Failed to fetch data:', err);
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
         // Fall back to sample data
         setData(sampleData);
       } finally {
-        setTimeout(() => setLoading(false), 500);
+        setTimeout(() => setLoading(false), 300);
       }
     };
 
     fetchData();
   }, []);
-
   // Add this function to download data to a JSON file
   const downloadDataAsJson = () => {
     if (!data) return;

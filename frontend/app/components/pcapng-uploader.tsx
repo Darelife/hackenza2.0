@@ -52,6 +52,8 @@ export default function PcapngUploader() {
       return;
     }
 
+    clearCacheData();
+
     // Check if file is a .pcapng file
     if (!selectedFile.name.toLowerCase().endsWith('.pcapng')) {
       setError('Please upload a .pcapng file only');
@@ -72,6 +74,106 @@ export default function PcapngUploader() {
     fileInputRef.current?.click();
   };
 
+  const clearCacheData = async () => {
+    try {
+      // Clear the cache
+      const cacheNames = await caches.keys();
+      for (const name of cacheNames) {
+        if (name === 'packet-analysis-data') {
+          await caches.delete(name);
+          console.log('Cache cleared successfully');
+        }
+      }
+
+      // Clear localStorage metadata
+      localStorage.removeItem('analysisMetadata');
+    } catch (err) {
+      console.error('Error clearing cache:', err);
+    }
+  };
+
+  // const handleSubmit = async () => {
+  //   if (!file) return;
+
+  //   setIsSubmitting(true);
+  //   setUploadProgress(0);
+  //   setError(null);
+  //   setIsAnalyzing(false);
+
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append('file', file);
+
+  //     // Use XMLHttpRequest to track upload progress
+  //     localStorage.setItem('formData', JSON.stringify(formData));
+  //     const xhr = new XMLHttpRequest();
+
+  //     xhr.upload.addEventListener('progress', (event) => {
+  //       if (event.lengthComputable) {
+  //         const percentComplete = Math.round(
+  //           (event.loaded / event.total) * 100,
+  //         );
+  //         setUploadProgress(percentComplete);
+
+  //         // If upload is complete (100%), set analyzing state
+  //         if (percentComplete === 100) {
+  //           setIsAnalyzing(true);
+  //         }
+  //       }
+  //     });
+
+  //     // Create a promise to handle the XHR request
+  //     const uploadPromise = new Promise<any>((resolve, reject) => {
+  //       xhr.onload = () => {
+  //         if (xhr.status >= 200 && xhr.status < 300) {
+  //           try {
+  //             const response = JSON.parse(xhr.responseText);
+  //             resolve(response);
+  //           } catch (e) {
+  //             reject(new Error('Invalid response from server'));
+  //           }
+  //         } else {
+  //           reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+  //         }
+  //       };
+
+  //       xhr.onerror = () => {
+  //         reject(new Error('Network error occurred'));
+  //       };
+  //     });
+
+  //     // Send the request
+  //     xhr.open('POST', `${API_BASE_URL}/api/upload`);
+  //     xhr.send(formData);
+
+  //     // save the formdata to local storage
+
+  //     // Wait for the upload to complete
+  //     const data = await uploadPromise;
+  //     console.log('Upload and analysis successful:', data);
+
+  //     // Store the analysis data directly in localStorage (no need to reference stored files)
+  //     localStorage.setItem(
+  //       'analysisData',
+  //       JSON.stringify({
+  //         data: data,
+  //         originalFilename: file.name,
+  //         timestamp: new Date().toISOString(),
+  //       }),
+  //     );
+
+  //     // Redirect to the overview page
+  //     router.push('/overview');
+  //   } catch (err) {
+  //     console.error('Upload error:', err);
+  //     setError(err instanceof Error ? err.message : 'Failed to upload file');
+  //     setIsAnalyzing(false);
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
+  // In the handleSubmit function, replace the localStorage.setItem with CacheStorage
   const handleSubmit = async () => {
     if (!file) return;
 
@@ -85,7 +187,6 @@ export default function PcapngUploader() {
       formData.append('file', file);
 
       // Use XMLHttpRequest to track upload progress
-      localStorage.setItem('formData', JSON.stringify(formData));
       const xhr = new XMLHttpRequest();
 
       xhr.upload.addEventListener('progress', (event) => {
@@ -126,21 +227,30 @@ export default function PcapngUploader() {
       xhr.open('POST', `${API_BASE_URL}/api/upload`);
       xhr.send(formData);
 
-      // save the formdata to local storage
-
       // Wait for the upload to complete
       const data = await uploadPromise;
       console.log('Upload and analysis successful:', data);
 
-      // Store the analysis data directly in localStorage (no need to reference stored files)
-      localStorage.setItem(
-        'analysisData',
-        JSON.stringify({
-          data: data,
-          originalFilename: file.name,
-          timestamp: new Date().toISOString(),
-        }),
-      );
+      // Store the analysis data in CacheStorage instead of localStorage
+      const metaData = {
+        originalFilename: file.name,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Store metadata in localStorage (small enough to fit)
+      localStorage.setItem('analysisMetadata', JSON.stringify(metaData));
+
+      // Store the large data in CacheStorage
+      try {
+        const cache = await caches.open('packet-analysis-data');
+        const jsonResponse = new Response(JSON.stringify(data), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        await cache.put('/analysis-data', jsonResponse);
+        console.log('Data stored successfully in CacheStorage');
+      } catch (cacheError) {
+        console.error('Error storing data in CacheStorage:', cacheError);
+      }
 
       // Redirect to the overview page
       router.push('/overview');
