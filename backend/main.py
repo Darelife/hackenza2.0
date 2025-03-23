@@ -19,6 +19,26 @@ CORS(app)
 def index():
     return jsonify({"message": "Welcome to the API"})
 
+@app.route("/api/graph/latency_distribution", methods=["GET"])
+def latency_distribution():
+    pcap_file = request.args.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-40ms.pcapng")
+    print("REQUEST ARGUMENTS:", dict(request.args))
+    print("PCAP_FILE_NAME: ", pcap_file)
+    
+    if not os.path.exists(pcap_file):
+        return jsonify({"error": "PCAP file not found"}), 404
+    try:
+        pa = PacketAnalyzer(pcap_file)
+        pa.analyze_delays()
+        distribution_data = pa.get_latency_distribution()
+        
+        return jsonify({
+            "status": "success",
+            "data": distribution_data
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/api/upload", methods=["POST"])
 def upload_file():
@@ -46,6 +66,7 @@ def upload_file():
         
         # Get basic statistics and overview
         stats = pa.basic_statistics()
+        pa.analyze_delays()
         total_packets = stats['total_packets']
         capture_duration = stats['capture_duration']
         overview = pa.get_capture_overview()
@@ -84,8 +105,12 @@ def upload_file():
                     "device_patterns": {}
                 }
             },
-            "packets": []
+            "packets": [],
+            "data_distribution" : []
         }
+
+        distribution_data = pa.get_latency_distribution()
+        result["data_distribution"] = distribution_data
         
         # Fill in protocol data
         for proto, count in sorted(overview['protocols'].items(), key=lambda x: x[1], reverse=True):
