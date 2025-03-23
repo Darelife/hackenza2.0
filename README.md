@@ -1,4 +1,4 @@
-# <img src="/home/soham/Documents/hackenza2.0/logo.png"></img>
+# <img src="./logo.png"></img>
 
 A web-based tool for analyzing network packet captures (PCAPNG files) with detailed visualization and analysis capabilities.
 
