@@ -55,7 +55,7 @@ interface Packet {
 }
 
 // Define API base URL
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'https://hackenza2pac.onrender.com';
 
 export default function SearchPage() {
   const [loading, setLoading] = useState(true);
