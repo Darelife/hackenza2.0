@@ -92,7 +92,7 @@ export function MultiLineChart({
               data={plotData}
               layout={{
                 autosize: true,
-                margin: { l: 50, r: 20, t: 10, b: 50 },
+                margin: { l: 50, r: 20, t: 20, b: 50 },
                 height: height,
                 xaxis: {
                   title: xAxisLabel,
