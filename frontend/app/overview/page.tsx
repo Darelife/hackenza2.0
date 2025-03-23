@@ -352,6 +352,10 @@ export default function Page() {
         // If we don't have localStorage data, fetch from API
         const response = await fetch(`${API_BASE_URL}/api/analyzeOverview`);
 
+        // save the response to local storage
+        const data = await response.json();
+        localStorage.setItem('analysisData', JSON.stringify(data));
+
         if (!response.ok) {
           throw new Error(`API Error: ${response.status}`);
         }
