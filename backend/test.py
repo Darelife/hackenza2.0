@@ -5,6 +5,7 @@ import numpy as np
 import seaborn as sns
 from datetime import datetime
 import os
+import json
 
 class PacketAnalyzer:
     def __init__(self, pcap_file):
@@ -74,6 +75,8 @@ class PacketAnalyzer:
             "capture_duration": float(self.packets[-1].time - self.packets[0].time)
         }
         return stats
+    def getAllPackets(self):
+        return self.packets
 
     def analyze_delays(self):
         """Analyze various types of delays and packet loss"""
@@ -558,35 +561,44 @@ class PacketAnalyzer:
         self._generate_text_report(output_dir)
 
     def _plot_latency_distribution(self, output_dir):
+        """Plot the distribution of latencies for each protocol and send data to API"""
         plt.figure(figsize=(12, 6))
-        
-        # Create data structure for JSON
         distribution_data = {}
         
         for proto in self.latencies:
             # Filter out negative latencies
             positive_latencies = [lat for lat in self.latencies[proto] if lat >= 0]
             if positive_latencies:
+                # Create KDE plot
                 kde = sns.kdeplot(data=positive_latencies, label=proto)
                 
+                # Get coordinates
                 line = kde.lines[-1]
                 xdata = line.get_xdata()
                 ydata = line.get_ydata()
                 
-                # Store coordinates in the distribution data
+                # Store filtered coordinates
+                valid_indices = [i for i, x in enumerate(xdata) if x >= 0]
                 distribution_data[proto] = {
-                    'x': [float(x) for x in xdata if x >= 0],  # Convert to float for JSON serialization
-                    'y': [float(y) for y in ydata if y >= 0]   # Convert to float for JSON serialization
+                    'x': [float(xdata[i]) for i in valid_indices],
+                    'y': [float(ydata[i]) for i in valid_indices]
                 }
         
-        plt.close()  # Close the figure since we don't need to save it
+        # Complete and save the figure
+        plt.xlabel('Latency (ms)')
+        plt.ylabel('Density')
+        plt.title('Latency Distribution by Protocol')
+        plt.legend()
+        plt.xlim(left=0)
+        plt.savefig(f'{output_dir}/latency_distribution.png')
+        plt.close()
         
-        # Send data to API endpoint
+        # Send data to API
         try:
             import requests
-            response = requests.post(
+            response = requests.get(
                 'http://localhost:8000/api/graph/latency_distribution',
-                json=distribution_data
+                params={'data': json.dumps(distribution_data)}
             )
             if response.status_code != 200:
                 print(f"Error sending latency distribution data: {response.text}")
@@ -1004,7 +1016,7 @@ class PacketAnalyzer:
 
 def main():
     # Use relative path from the script's location
-    pcap_file = os.path.join(os.path.dirname(__file__), "pcapngFiles", "28-1-25-bro-rpi-60ms.pcapng")
+    pcap_file = os.path.join(os.path.dirname(__file__), "pcapngFiles", "28-1-25-bro-laptp-20ms.pcapng")
     
     print(f"Analyzing {pcap_file}...")
     analyzer = PacketAnalyzer(pcap_file)

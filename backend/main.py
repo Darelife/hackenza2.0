@@ -8,6 +8,7 @@ import os
 import json
 import tempfile
 from datetime import datetime
+from scapy.all import IP, TCP, UDP
 from test import PacketAnalyzer
 
 app = Flask(__name__)
@@ -51,6 +52,7 @@ def upload_file():
         
         # Create data structure to hold results - matches data.json format
         result = {
+            "temp_path": temp_path,
             "overview": {
                 "Protocol": [],
                 "Packet": [],
@@ -212,7 +214,7 @@ def upload_file():
             # Continue with basic data even if analysis fails
 
         # Delete the temporary file after processing
-        os.unlink(temp_path)
+        # os.unlink(temp_path)
 
         return jsonify(result)
 
@@ -271,6 +273,7 @@ def get_overview():
 
 @app.route("/api/analyzeOverview", methods=["GET"])
 def analyze_overview():
+    print("REQUEST ARGUMENTS:", dict(request.args))
     # For GET requests, use a default file or get from query params
     if request.method == "GET":
         pcap_file = request.args.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng")
@@ -468,14 +471,13 @@ def submit_data():
 
 @app.route("/api/graph/latency_distribution", methods=["GET"])
 def latency_distribution():
+    pcap_file = request.args.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-40ms.pcapng")
+    print("REQUEST ARGUMENTS:", dict(request.args))
+    print("PCAP_FILE_NAME: ", pcap_file)
+    
+    if not os.path.exists(pcap_file):
+        return jsonify({"error": "PCAP file not found"}), 404
     try:
-        # For GET requests, use a default file or get from query params
-        pcap_file = request.args.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng")
-        
-        if not os.path.exists(pcap_file):
-            return jsonify({"error": "PCAP file not found"}), 404
-        
-        # Create PacketAnalyzer instance and analyze delays first
         pa = PacketAnalyzer(pcap_file)
         pa.analyze_delays()
         distribution_data = pa.get_latency_distribution()
@@ -484,9 +486,77 @@ def latency_distribution():
             "status": "success",
             "data": distribution_data
         })
-        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+
+@app.route("/api/getAllPackets", methods=["GET"])
+def get_all_packets():
+    # For GET requests, use a default file or get from query params
+    pcap_file = request.args.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-40ms.pcapng")
+    
+    if not os.path.exists(pcap_file):
+        return jsonify({"error": "PCAP file not found"}), 404
+    
+    try:
+        pa = PacketAnalyzer(pcap_file)
+        all_packets = pa.getAllPackets()
+        
+        # Convert Scapy packets to a serializable format
+        packet_list = []
+        for i, pkt in enumerate(all_packets):
+            packet_info = {
+                "number": i + 1,
+                "time": str(datetime.fromtimestamp(float(pkt.time))),
+                "length": len(pkt),
+                "protocol": "Unknown",
+                "source": "",
+                "destination": "",
+                "info": ""
+            }
+            
+            # Extract common fields if available
+            if IP in pkt:
+                packet_info["source"] = pkt[IP].src
+                packet_info["destination"] = pkt[IP].dst
+                
+                # Determine protocol
+                if TCP in pkt:
+                    packet_info["protocol"] = "TCP"
+                    src_port = pkt[TCP].sport
+                    dst_port = pkt[TCP].dport
+                    packet_info["info"] = f"TCP {src_port} → {dst_port} [SYN: {pkt[TCP].flags.S}, ACK: {pkt[TCP].flags.A}, FIN: {pkt[TCP].flags.F}]"
+                elif UDP in pkt:
+                    packet_info["protocol"] = "UDP"
+                    src_port = pkt[UDP].sport
+                    dst_port = pkt[UDP].dport
+                    packet_info["info"] = f"UDP {src_port} → {dst_port} Len={len(pkt[UDP].payload)}"
+                else:
+                    packet_info["protocol"] = "IP"
+                    packet_info["info"] = f"IP Protocol: {pkt[IP].proto}"
+            
+            # If we couldn't determine protocol from IP, try other common protocols
+            elif 'ARP' in pkt:
+                packet_info["protocol"] = "ARP"
+                if hasattr(pkt.getlayer('ARP'), 'psrc') and hasattr(pkt.getlayer('ARP'), 'pdst'):
+                    packet_info["source"] = pkt.getlayer('ARP').psrc
+                    packet_info["destination"] = pkt.getlayer('ARP').pdst
+                    packet_info["info"] = f"Who has {pkt.getlayer('ARP').pdst}? Tell {pkt.getlayer('ARP').psrc}"
+            elif 'IPv6' in pkt:
+                packet_info["protocol"] = "IPv6"
+                if hasattr(pkt.getlayer('IPv6'), 'src') and hasattr(pkt.getlayer('IPv6'), 'dst'):
+                    packet_info["source"] = pkt.getlayer('IPv6').src
+                    packet_info["destination"] = pkt.getlayer('IPv6').dst
+                    packet_info["info"] = f"IPv6 {pkt.getlayer('IPv6').nh}"
+            
+            packet_list.append(packet_info)
+        
+        return jsonify({"AllPackets": packet_list})
+        
+    except Exception as e:
+        print(f"Error retrieving packets: {str(e)}")
+        return jsonify({"error": str(e), "AllPackets": []}), 500
 
 
 if __name__ == "__main__":
