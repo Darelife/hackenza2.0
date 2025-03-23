@@ -269,6 +269,31 @@ class PacketAnalyzer:
                     # Update flow tracking
                     flow_seq_tracking[flow]['last_seq'] = (current_seq + payload_len) & 0xFFFFFFFF
                     flow_seq_tracking[flow]['last_ack'] = pkt[TCP].ack
+    def get_latency_distribution(self):
+        """Generate latency distribution data for plotting"""
+        distribution_data = {}
+        
+        plt.figure(figsize=(12, 6))
+        
+        for proto in self.latencies:
+            # Filter out negative latencies
+            positive_latencies = [lat for lat in self.latencies[proto] if lat >= 0]
+            if positive_latencies:
+                kde = sns.kdeplot(data=positive_latencies, label=proto)
+                
+                line = kde.lines[-1]
+                xdata = line.get_xdata()
+                ydata = line.get_ydata()
+                
+                # Store coordinates in the distribution data
+                distribution_data[proto] = {
+                    'x': [float(x) for x in xdata if x >= 0],  # Convert to float for JSON serialization
+                    'y': [float(y) for y in ydata if y >= 0]   # Convert to float for JSON serialization
+                }
+        
+        plt.close()  # Close the figure since we don't need it
+        
+        return distribution_data
 
     def _get_protocol(self, pkt):
         """Determine packet protocol with expanded protocol detection"""

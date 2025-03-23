@@ -30,38 +30,55 @@ export default function VisualizationPage() {
     setError(null);
 
     // Fetch the JSON file from public directory instead of CSV
-    fetch('/latency_distribution.json')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load JSON file: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((jsonData) => {
-        try {
-          // Extract the data from the JSON structure
-          // Based on your sample JSON, the data is nested in a "data" property
-          if (jsonData && jsonData.data) {
-            setLatencyData(jsonData.data);
-            console.log(
-              'Data loaded successfully:',
-              Object.keys(jsonData.data),
-            );
-          } else {
-            throw new Error('Invalid JSON structure: missing data property');
-          }
-        } catch (err) {
-          console.error('Error processing JSON data:', err);
-          setError(`Error processing JSON data: ${err}`);
-        }
-      })
-      .catch((err) => {
-        console.error('Error fetching JSON:', err);
-        setError(`Error fetching JSON: ${err.message}`);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    
+    const savedAnalysis = localStorage.getItem('analysisData');
+    if (savedAnalysis) {
+      try {
+          const analysisData = JSON.parse(savedAnalysis);
+          console.log('Analysis data loaded:', analysisData);
+          setLatencyData(analysisData.data.data_distribution);
+
+      } catch(e) {
+          console.error('Error parsing analysis data:', e);
+          throw new Error('Failed to parse saved analysis data');
+      }
+
+      setIsLoading(false);
+
+    }
+
+  //   fetch('/latency_distribution.json')
+  //     .then((response) => {
+  //       if (!response.ok) {
+  //         throw new Error(`Failed to load JSON file: ${response.status}`);
+  //       }
+  //       return response.json();
+  //     })
+  //     .then((jsonData) => {
+  //       try {
+  //         // Extract the data from the JSON structure
+  //         // Based on your sample JSON, the data is nested in a "data" property
+  //         if (jsonData && jsonData.data) {
+  //           setLatencyData(jsonData.data);
+  //           console.log(
+  //             'Data loaded successfully:',
+  //             Object.keys(jsonData.data),
+  //           );
+  //         } else {
+  //           throw new Error('Invalid JSON structure: missing data property');
+  //         }
+  //       } catch (err) {
+  //         console.error('Error processing JSON data:', err);
+  //         setError(`Error processing JSON data: ${err}`);
+  //       }
+  //     })
+  //     .catch((err) => {
+  //       console.error('Error fetching JSON:', err);
+  //       setError(`Error fetching JSON: ${err.message}`);
+  //     })
+  //     .finally(() => {
+  //       setIsLoading(false);
+  //     });
   }, []);
 
   return (
