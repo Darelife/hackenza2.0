@@ -574,6 +574,105 @@ export default function Page() {
                 </div>
               </div>
             )}
+
+          {/* Add Latency Analysis Section - similar to Jitter section */}
+          {data?.analysis?.latency &&
+            Object.keys(data.analysis.latency).length > 0 && (
+              <div className='rounded-xl bg-muted/50 p-6 mt-4'>
+                <h3 className='text-lg font-medium mb-4'>
+                  Network Latency Analysis
+                </h3>
+
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  {Object.entries(data.analysis.latency)
+                    .sort((a, b) => b[1].avg - a[1].avg) // Sort by average latency value (highest first)
+                    .map(([protocol, stats]) => {
+                      // Calculate latency severity
+                      const severityClass =
+                        stats.avg < 10
+                          ? 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : stats.avg < 100
+                          ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                          : 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+
+                      const severityText =
+                        stats.avg < 10
+                          ? 'text-green-800 dark:text-green-400'
+                          : stats.avg < 100
+                          ? 'text-yellow-800 dark:text-yellow-400'
+                          : 'text-red-800 dark:text-red-400';
+
+                      return (
+                        <div
+                          key={protocol}
+                          className={`border rounded-lg p-4 ${severityClass}`}
+                        >
+                          <div className='flex justify-between items-center'>
+                            <h4 className='font-medium'>{protocol}</h4>
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full ${severityText} font-medium`}
+                            >
+                              {stats.avg < 10
+                                ? 'Low'
+                                : stats.avg < 100
+                                ? 'Medium'
+                                : 'High'}{' '}
+                              Latency
+                            </span>
+                          </div>
+
+                          <div className='space-y-2 mt-3'>
+                            <div className='flex justify-between text-sm'>
+                              <span>Average</span>
+                              <span className='font-medium'>
+                                {stats.avg.toFixed(2)} ms
+                              </span>
+                            </div>
+                            <div className='flex justify-between text-sm'>
+                              <span>Maximum</span>
+                              <span>{stats.max.toFixed(2)} ms</span>
+                            </div>
+                            <div className='flex justify-between text-sm'>
+                              <span>Minimum</span>
+                              <span>{stats.min.toFixed(2)} ms</span>
+                            </div>
+                            <div className='flex justify-between text-sm'>
+                              <span>Packets</span>
+                              <span>{stats.count.toLocaleString()}</span>
+                            </div>
+                            <div className='mt-3'>
+                              <div className='w-full bg-white/50 dark:bg-black/20 rounded-full h-1.5'>
+                                <div
+                                  className='bg-primary h-1.5 rounded-full'
+                                  style={{
+                                    width: `${Math.min(
+                                      100,
+                                      (stats.avg / 50) * 100,
+                                    )}%`,
+                                  }}
+                                ></div>
+                              </div>
+                              <div className='flex justify-between text-xs text-muted-foreground mt-1'>
+                                <span>0 ms</span>
+                                <span>50+ ms</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                <div className='mt-4 text-sm text-muted-foreground'>
+                  <p>
+                    <strong>Latency</strong> measures how long it takes for
+                    packets to travel across the network. Lower latency leads to
+                    more responsive applications.
+                  </p>
+                </div>
+              </div>
+            )}
+
           {/* Add Packet Loss Summary if available */}
           {data?.analysis?.packet_loss && data.analysis.packet_loss.overall && (
             <div className='rounded-xl bg-muted/50 p-6 mt-4'>
