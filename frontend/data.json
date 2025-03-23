@@ -1,0 +1,381 @@
+{
+  "analysis": {
+    "delay_categories": {
+      "broker_processing_delays": {
+        "avg": 1549.77477298063,
+        "count": 17,
+        "max": 14000.8308887482
+      },
+      "bundling_delays": {
+        "avg": 0.12462843355335,
+        "count": 2529,
+        "max": 0.998973846435547
+      },
+      "device_to_broker_delays": {
+        "avg": 8.12883538862691,
+        "count": 4922,
+        "max": 14000.8308887482
+      }
+    },
+    "iot_metrics": {
+      "aggregation_intervals": [],
+      "bundle_sizes": [],
+      "device_patterns": {
+        "192.168.70.112": {
+          "bundled_packets": 0,
+          "small_packets": 2235,
+          "total": 2235
+        },
+        "192.168.70.187": {
+          "bundled_packets": 2275,
+          "small_packets": 116,
+          "total": 2391
+        },
+        "192.168.70.97": {
+          "bundled_packets": 2052,
+          "small_packets": 2571,
+          "total": 4623
+        }
+      }
+    },
+    "jitter": {
+      "ARP": {
+        "avg": 260.465838692405,
+        "count": 11,
+        "max": 1415.23313522339,
+        "min": 0.123023986816406,
+        "std": 534.859534384999
+      },
+      "HTTPS": {
+        "avg": 344.881384461014,
+        "count": 27,
+        "max": 2539.68000411987,
+        "min": 2.72488594055176,
+        "std": 651.261232815364
+      },
+      "IPv6": {
+        "avg": 4.3135370526995,
+        "count": 7,
+        "max": 9.94086265563965,
+        "min": 0,
+        "std": 3.00987094076792
+      },
+      "MQTT": {
+        "avg": 24.5196628653001,
+        "count": 9254,
+        "max": 14000.7319450378,
+        "min": 0.00500679016113281,
+        "std": 208.043198363383
+      },
+      "UDP": {
+        "avg": 1.46947588239397,
+        "count": 7,
+        "max": 3.4949779510498,
+        "min": 0.09918212890625,
+        "std": 1.2386296598365
+      }
+    },
+    "latency": {
+      "ARP": {
+        "avg": 124.688605467478,
+        "count": 12,
+        "max": 1415.36617279053,
+        "min": 0,
+        "std": 389.327133718423
+      },
+      "HTTPS": {
+        "avg": 250.083412442889,
+        "count": 28,
+        "max": 2565.03796577454,
+        "min": 0,
+        "std": 579.920371978889
+      },
+      "IPv6": {
+        "avg": 4.63938713073731,
+        "count": 8,
+        "max": 14.854907989502,
+        "min": 0,
+        "std": 4.58918340352332
+      },
+      "MQTT": {
+        "avg": 14.9192146968996,
+        "count": 9255,
+        "max": 14000.8308887482,
+        "min": 0,
+        "std": 147.734929447471
+      },
+      "UDP": {
+        "avg": 2.07611918449402,
+        "count": 8,
+        "max": 4.36210632324219,
+        "min": 0,
+        "std": 1.6347871331066
+      }
+    },
+    "packet_loss": {
+      "overall": {
+        "loss_events": 2,
+        "loss_percentage": 0.0214730513205927,
+        "total_lost_packets": 2,
+        "total_transmitted": 9312
+      },
+      "per_protocol": {
+        "ARP": {
+          "loss_events": 0,
+          "loss_percentage": 0,
+          "lost_packets": 0,
+          "transmitted": 12
+        },
+        "HTTPS": {
+          "loss_events": 0,
+          "loss_percentage": 0,
+          "lost_packets": 0,
+          "transmitted": 28
+        },
+        "IPv6": {
+          "loss_events": 0,
+          "loss_percentage": 0,
+          "lost_packets": 0,
+          "transmitted": 8
+        },
+        "MQTT": {
+          "loss_events": 2,
+          "loss_percentage": 0.0216052716862915,
+          "lost_packets": 2,
+          "transmitted": 9255
+        },
+        "UDP": {
+          "loss_events": 0,
+          "loss_percentage": 0,
+          "lost_packets": 0,
+          "transmitted": 8
+        }
+      }
+    }
+  },
+  "overview": {
+    "Packet": [
+      {
+        "name": "IP",
+        "packets": 9292,
+        "percentage": 99.7852233676976
+      },
+      {
+        "name": "TCP",
+        "packets": 9284,
+        "percentage": 99.6993127147766
+      },
+      {
+        "name": "ARP",
+        "packets": 12,
+        "percentage": 0.128865979381443
+      },
+      {
+        "name": "UDP",
+        "packets": 8,
+        "percentage": 0.0859106529209622
+      },
+      {
+        "name": "IPv6",
+        "packets": 8,
+        "percentage": 0.0859106529209622
+      }
+    ],
+    "Protocol": [
+      {
+        "name": "MQTT",
+        "packets": 9256,
+        "percentage": 99.3986254295533
+      },
+      {
+        "name": "HTTPS",
+        "packets": 28,
+        "percentage": 0.300687285223368
+      },
+      {
+        "name": "ARP",
+        "packets": 12,
+        "percentage": 0.128865979381443
+      },
+      {
+        "name": "UDP",
+        "packets": 8,
+        "percentage": 0.0859106529209622
+      },
+      {
+        "name": "IPv6",
+        "packets": 8,
+        "percentage": 0.0859106529209622
+      }
+    ],
+    "ip_stats": {
+      "top_destinations": [
+        {
+          "ip": "192.168.70.97",
+          "packets": 4640,
+          "percentage": 49.8281786941581
+        },
+        {
+          "ip": "192.168.70.187",
+          "packets": 2392,
+          "percentage": 25.6872852233677
+        },
+        {
+          "ip": "192.168.70.112",
+          "packets": 2234,
+          "percentage": 23.9905498281787
+        },
+        {
+          "ip": "4.186.14.122",
+          "packets": 9,
+          "percentage": 0.0966494845360825
+        },
+        {
+          "ip": "48.218.104.163",
+          "packets": 8,
+          "percentage": 0.0859106529209622
+        },
+        {
+          "ip": "224.0.0.251",
+          "packets": 8,
+          "percentage": 0.0859106529209622
+        },
+        {
+          "ip": "18.209.197.239",
+          "packets": 1,
+          "percentage": 0.0107388316151203
+        }
+      ],
+      "top_sources": [
+        {
+          "ip": "192.168.70.97",
+          "packets": 4644,
+          "percentage": 49.8711340206186
+        },
+        {
+          "ip": "192.168.70.187",
+          "packets": 2393,
+          "percentage": 25.6980240549828
+        },
+        {
+          "ip": "192.168.70.112",
+          "packets": 2245,
+          "percentage": 24.108676975945
+        },
+        {
+          "ip": "4.186.14.122",
+          "packets": 5,
+          "percentage": 0.0536941580756014
+        },
+        {
+          "ip": "48.218.104.163",
+          "packets": 5,
+          "percentage": 0.0536941580756014
+        }
+      ]
+    },
+    "port_stats": {
+      "top_destinations": [
+        {
+          "packets": 4630,
+          "percentage": 49.7207903780069,
+          "port": 8883
+        },
+        {
+          "packets": 2391,
+          "percentage": 25.6765463917526,
+          "port": 58306
+        },
+        {
+          "packets": 2234,
+          "percentage": 23.9905498281787,
+          "port": 49697
+        },
+        {
+          "packets": 18,
+          "percentage": 0.193298969072165,
+          "port": 443
+        },
+        {
+          "packets": 8,
+          "percentage": 0.0859106529209622,
+          "port": 5353
+        },
+        {
+          "packets": 5,
+          "percentage": 0.0536941580756014,
+          "port": 51766
+        },
+        {
+          "packets": 5,
+          "percentage": 0.0536941580756014,
+          "port": 51811
+        },
+        {
+          "packets": 1,
+          "percentage": 0.0107388316151203,
+          "port": 58305
+        }
+      ],
+      "top_sources": [
+        {
+          "packets": 4626,
+          "percentage": 49.6778350515464,
+          "port": 8883
+        },
+        {
+          "packets": 2392,
+          "percentage": 25.6872852233677,
+          "port": 58306
+        },
+        {
+          "packets": 2237,
+          "percentage": 24.0227663230241,
+          "port": 49697
+        },
+        {
+          "packets": 10,
+          "percentage": 0.107388316151203,
+          "port": 443
+        },
+        {
+          "packets": 9,
+          "percentage": 0.0966494845360825,
+          "port": 51766
+        },
+        {
+          "packets": 8,
+          "percentage": 0.0859106529209622,
+          "port": 51811
+        },
+        {
+          "packets": 8,
+          "percentage": 0.0859106529209622,
+          "port": 5353
+        },
+        {
+          "packets": 1,
+          "percentage": 0.0107388316151203,
+          "port": 58305
+        },
+        {
+          "packets": 1,
+          "percentage": 0.0107388316151203,
+          "port": 51823
+        }
+      ]
+    },
+    "stats": {
+      "avg_packet_size": 134.998923805424,
+      "capture_duration": 146.629655,
+      "max_packet_size": 854,
+      "min_packet_size": 54,
+      "packets_per_second": 63.5069352103434,
+      "total_packets": 9312
+    },
+    "time_range": {
+      "end": 1738083277.97501,
+      "start": 1738083131.34535
+    }
+  }
+}

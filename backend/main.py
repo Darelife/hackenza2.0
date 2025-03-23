@@ -40,38 +40,181 @@ def upload_file():
             file.save(temp.name)
             temp_path = temp.name
 
-        # Process the file to generate overview
+        # Process the file with the PacketAnalyzer
         pa = PacketAnalyzer(temp_path)
+        
+        # Get basic statistics and overview
         stats = pa.basic_statistics()
-        total_packets = stats["total_packets"]
-
-        # Get overview data
+        total_packets = stats['total_packets']
+        capture_duration = stats['capture_duration']
         overview = pa.get_capture_overview()
-        data = {"Protocol": [], "Packet": []}
-
-        for proto, count in sorted(
-            overview["protocols"].items(), key=lambda x: x[1], reverse=True
-        ):
+        
+        # Create data structure to hold results - matches data.json format
+        result = {
+            "overview": {
+                "Protocol": [],
+                "Packet": [],
+                "stats": {
+                    "total_packets": total_packets,
+                    "avg_packet_size": stats['avg_packet_size'],
+                    "max_packet_size": stats['max_packet_size'],
+                    "min_packet_size": stats['min_packet_size'],
+                    "capture_duration": capture_duration,
+                    "packets_per_second": total_packets / capture_duration if capture_duration > 0 else 0
+                },
+                "time_range": overview.get('time_range', {"start": 0, "end": 0}),
+                "ip_stats": {
+                    "top_sources": [],
+                    "top_destinations": []
+                },
+                "port_stats": {
+                    "top_sources": [],
+                    "top_destinations": []
+                }
+            },
+            "analysis": {
+                "packet_loss": {},
+                "latency": {},
+                "jitter": {},
+                "delay_categories": {},
+                "iot_metrics": {
+                    "bundle_sizes": [],
+                    "aggregation_intervals": [],
+                    "device_patterns": {}
+                }
+            }
+        }
+        
+        # Fill in protocol data
+        for proto, count in sorted(overview['protocols'].items(), key=lambda x: x[1], reverse=True):
             percentage = (count / total_packets) * 100
-            data["Protocol"].append(
-                {"name": proto, "packets": count, "percentage": percentage}
-            )
+            result["overview"]["Protocol"].append({
+                "name": proto,
+                "packets": count,
+                "percentage": percentage
+            })
 
-        for pkt_type, count in sorted(
-            overview["packet_counts"].items(), key=lambda x: x[1], reverse=True
-        ):
+        # Fill in packet type data
+        for pkt_type, count in sorted(overview['packet_counts'].items(), key=lambda x: x[1], reverse=True):
             percentage = (count / total_packets) * 100
-            data["Packet"].append(
-                {"name": pkt_type, "packets": count, "percentage": percentage}
-            )
+            result["overview"]["Packet"].append({
+                "name": pkt_type,
+                "packets": count,
+                "percentage": percentage
+            })
 
-        data["total_packets"] = total_packets
-        data["filename"] = file.filename  # Return original filename
+        # Add IP stats if available
+        if 'ip_stats' in overview:
+            # Top IP sources
+            for ip, count in sorted(overview['ip_stats'].get('sources', {}).items(), key=lambda x: x[1], reverse=True)[:10]:
+                percentage = (count / total_packets) * 100
+                result["overview"]["ip_stats"]["top_sources"].append({
+                    "ip": ip,
+                    "packets": count,
+                    "percentage": percentage
+                })
+            
+            # Top IP destinations
+            for ip, count in sorted(overview['ip_stats'].get('destinations', {}).items(), key=lambda x: x[1], reverse=True)[:10]:
+                percentage = (count / total_packets) * 100
+                result["overview"]["ip_stats"]["top_destinations"].append({
+                    "ip": ip,
+                    "packets": count,
+                    "percentage": percentage
+                })
+
+        # Add port stats if available
+        if 'port_stats' in overview:
+            # Top source ports
+            for port, count in sorted(overview['port_stats'].get('sources', {}).items(), key=lambda x: x[1], reverse=True)[:10]:
+                percentage = (count / total_packets) * 100
+                result["overview"]["port_stats"]["top_sources"].append({
+                    "port": port,
+                    "packets": count,
+                    "percentage": percentage
+                })
+            
+            # Top destination ports
+            for port, count in sorted(overview['port_stats'].get('destinations', {}).items(), key=lambda x: x[1], reverse=True)[:10]:
+                percentage = (count / total_packets) * 100
+                result["overview"]["port_stats"]["top_destinations"].append({
+                    "port": port,
+                    "packets": count,
+                    "percentage": percentage
+                })
+
+        # Perform analysis if the methods are available in PacketAnalyzer
+        try:
+            pa.analyze_delays()
+            
+            # Add delay categories if available
+            if hasattr(pa, 'delay_categories'):
+                for category, delays in pa.delay_categories.items():
+                    if delays:
+                        values = [d['delay'] for d in delays]
+                        result["analysis"]["delay_categories"][category] = {
+                            "avg": float(np.mean(values)),
+                            "max": float(max(values)),
+                            "count": len(values)
+                        }
+            
+            # Add latency statistics if available
+            if hasattr(pa, 'latencies'):
+                for proto in pa.latencies:
+                    if pa.latencies[proto]:
+                        result["analysis"]["latency"][proto] = {
+                            "avg": float(np.mean(pa.latencies[proto])),
+                            "max": float(max(pa.latencies[proto])),
+                            "min": float(min(pa.latencies[proto])),
+                            "std": float(np.std(pa.latencies[proto])),
+                            "count": len(pa.latencies[proto])
+                        }
+            
+            # Add jitter statistics if available
+            if hasattr(pa, 'jitter_values'):
+                for proto in pa.jitter_values:
+                    if pa.jitter_values[proto]:
+                        result["analysis"]["jitter"][proto] = {
+                            "avg": float(np.mean(pa.jitter_values[proto])),
+                            "max": float(max(pa.jitter_values[proto])),
+                            "min": float(min(pa.jitter_values[proto])),
+                            "std": float(np.std(pa.jitter_values[proto])),
+                            "count": len(pa.jitter_values[proto])
+                        }
+            
+            # Add packet loss statistics if available
+            if hasattr(pa, 'calculate_packet_loss'):
+                loss_stats = pa.calculate_packet_loss()
+                result["analysis"]["packet_loss"] = loss_stats
+            
+            # Add IoT metrics if available
+            if hasattr(pa, 'iot_metrics'):
+                # Add bundle sizes
+                if pa.iot_metrics.get('bundle_sizes'):
+                    result["analysis"]["iot_metrics"]["bundle_sizes"] = pa.iot_metrics['bundle_sizes']
+                
+                # Add aggregation intervals
+                if pa.iot_metrics.get('aggregation_intervals'):
+                    result["analysis"]["iot_metrics"]["aggregation_intervals"] = pa.iot_metrics['aggregation_intervals']
+                
+                # Add device patterns
+                if pa.iot_metrics.get('device_patterns'):
+                    for device, patterns in pa.iot_metrics['device_patterns'].items():
+                        small_pkts = sum(1 for p in patterns if p.get('type') == 'small')
+                        bundle_pkts = sum(1 for p in patterns if p.get('type') == 'bundle')
+                        result["analysis"]["iot_metrics"]["device_patterns"][device] = {
+                            "small_packets": small_pkts,
+                            "bundled_packets": bundle_pkts,
+                            "total": len(patterns)
+                        }
+        except Exception as analysis_err:
+            print(f"Error during analysis: {analysis_err}")
+            # Continue with basic data even if analysis fails
 
         # Delete the temporary file after processing
         os.unlink(temp_path)
 
-        return jsonify(data)
+        return jsonify(result)
 
     except Exception as e:
         print(f"Error processing file: {str(e)}")
@@ -80,13 +223,14 @@ def upload_file():
 
 @app.route("/api/getOverview", methods=["GET"])
 def get_overview():
-    data = request.get_json() 
     # For GET requests, use a default file or get from query params
     if request.method == "GET":
         pcap_file = request.args.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng")
     # For POST requests with JSON payload
     else:
+        data = request.get_json()
         pcap_file = data.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng")
+    
     if not os.path.exists(pcap_file):
         return jsonify({"error": "PCAP file not found"}), 404
     
@@ -201,101 +345,112 @@ def analyze_overview():
         })
     
     # Top IP sources
-    for ip, count in sorted(overview['ip_stats']['sources'].items(), key=lambda x: x[1], reverse=True)[:10]:
-        percentage = (count / total_packets) * 100
-        result["overview"]["ip_stats"]["top_sources"].append({
-            "ip": ip,
-            "packets": count,
-            "percentage": percentage
-        })
+    if 'ip_stats' in overview and 'sources' in overview['ip_stats']:
+        for ip, count in sorted(overview['ip_stats']['sources'].items(), key=lambda x: x[1], reverse=True)[:10]:
+            percentage = (count / total_packets) * 100
+            result["overview"]["ip_stats"]["top_sources"].append({
+                "ip": ip,
+                "packets": count,
+                "percentage": percentage
+            })
     
     # Top IP destinations
-    for ip, count in sorted(overview['ip_stats']['destinations'].items(), key=lambda x: x[1], reverse=True)[:10]:
-        percentage = (count / total_packets) * 100
-        result["overview"]["ip_stats"]["top_destinations"].append({
-            "ip": ip,
-            "packets": count,
-            "percentage": percentage
-        })
+    if 'ip_stats' in overview and 'destinations' in overview['ip_stats']:
+        for ip, count in sorted(overview['ip_stats']['destinations'].items(), key=lambda x: x[1], reverse=True)[:10]:
+            percentage = (count / total_packets) * 100
+            result["overview"]["ip_stats"]["top_destinations"].append({
+                "ip": ip,
+                "packets": count,
+                "percentage": percentage
+            })
     
     # Top source ports
-    for port, count in sorted(overview['port_stats']['sources'].items(), key=lambda x: x[1], reverse=True)[:10]:
-        percentage = (count / total_packets) * 100
-        result["overview"]["port_stats"]["top_sources"].append({
-            "port": port,
-            "packets": count,
-            "percentage": percentage
-        })
+    if 'port_stats' in overview and 'sources' in overview['port_stats']:
+        for port, count in sorted(overview['port_stats']['sources'].items(), key=lambda x: x[1], reverse=True)[:10]:
+            percentage = (count / total_packets) * 100
+            result["overview"]["port_stats"]["top_sources"].append({
+                "port": port,
+                "packets": count,
+                "percentage": percentage
+            })
     
     # Top destination ports
-    for port, count in sorted(overview['port_stats']['destinations'].items(), key=lambda x: x[1], reverse=True)[:10]:
-        percentage = (count / total_packets) * 100
-        result["overview"]["port_stats"]["top_destinations"].append({
-            "port": port,
-            "packets": count,
-            "percentage": percentage
-        })
+    if 'port_stats' in overview and 'destinations' in overview['port_stats']:
+        for port, count in sorted(overview['port_stats']['destinations'].items(), key=lambda x: x[1], reverse=True)[:10]:
+            percentage = (count / total_packets) * 100
+            result["overview"]["port_stats"]["top_destinations"].append({
+                "port": port,
+                "packets": count,
+                "percentage": percentage
+            })
     
     # Perform analysis
-    pa.analyze_delays()
-    loss_stats = pa.calculate_packet_loss()
-    result["analysis"]["packet_loss"] = loss_stats
-    
-    # Add latency statistics
-    for proto in pa.latencies:
-        if pa.latencies[proto]:
-            result["analysis"]["latency"][proto] = {
-                "avg": float(np.mean(pa.latencies[proto])),
-                "max": float(max(pa.latencies[proto])),
-                "min": float(min(pa.latencies[proto])),
-                "std": float(np.std(pa.latencies[proto])),
-                "count": len(pa.latencies[proto])
-            }
-    
-    # Add jitter statistics
-    for proto in pa.jitter_values:
-        if pa.jitter_values[proto]:
-            result["analysis"]["jitter"][proto] = {
-                "avg": float(np.mean(pa.jitter_values[proto])),
-                "max": float(max(pa.jitter_values[proto])),
-                "min": float(min(pa.jitter_values[proto])),
-                "std": float(np.std(pa.jitter_values[proto])),
-                "count": len(pa.jitter_values[proto])
-            }
-    
-    # Add delay categories
-    for category, delays in pa.delay_categories.items():
-        if delays:
-            values = [d['delay'] for d in delays]
-            result["analysis"]["delay_categories"][category] = {
-                "avg": float(np.mean(values)),
-                "max": float(max(values)),
-                "count": len(values)
-            }
-    
-    # Add IoT metrics
-    if pa.iot_metrics['bundle_sizes']:
-        result["analysis"]["iot_metrics"]["bundle_sizes"] = {
-            "avg": float(np.mean(pa.iot_metrics['bundle_sizes'])),
-            "max": float(max(pa.iot_metrics['bundle_sizes'])),
-            "count": len(pa.iot_metrics['bundle_sizes'])
-        }
-    
-    if pa.iot_metrics['aggregation_intervals']:
-        result["analysis"]["iot_metrics"]["aggregation_intervals"] = {
-            "avg": float(np.mean(pa.iot_metrics['aggregation_intervals'])),
-            "max": float(max(pa.iot_metrics['aggregation_intervals'])),
-            "count": len(pa.iot_metrics['aggregation_intervals'])
-        }
-    
-    for device, patterns in pa.iot_metrics['device_patterns'].items():
-        small_pkts = sum(1 for p in patterns if p['type'] == 'small')
-        bundle_pkts = sum(1 for p in patterns if p['type'] == 'bundle')
-        result["analysis"]["iot_metrics"]["device_patterns"][device] = {
-            "small_packets": small_pkts,
-            "bundled_packets": bundle_pkts,
-            "total": len(patterns)
-        }
+    try:
+        pa.analyze_delays()
+        
+        # Add delay categories if available
+        if hasattr(pa, 'delay_categories'):
+            for category, delays in pa.delay_categories.items():
+                if delays:
+                    values = [d['delay'] for d in delays]
+                    result["analysis"]["delay_categories"][category] = {
+                        "avg": float(np.mean(values)),
+                        "max": float(max(values)),
+                        "count": len(values)
+                    }
+        
+        # Add latency statistics
+        if hasattr(pa, 'latencies'):
+            for proto in pa.latencies:
+                if pa.latencies[proto]:
+                    result["analysis"]["latency"][proto] = {
+                        "avg": float(np.mean(pa.latencies[proto])),
+                        "max": float(max(pa.latencies[proto])),
+                        "min": float(min(pa.latencies[proto])),
+                        "std": float(np.std(pa.latencies[proto])),
+                        "count": len(pa.latencies[proto])
+                    }
+        
+        # Add jitter statistics
+        if hasattr(pa, 'jitter_values'):
+            for proto in pa.jitter_values:
+                if pa.jitter_values[proto]:
+                    result["analysis"]["jitter"][proto] = {
+                        "avg": float(np.mean(pa.jitter_values[proto])),
+                        "max": float(max(pa.jitter_values[proto])),
+                        "min": float(min(pa.jitter_values[proto])),
+                        "std": float(np.std(pa.jitter_values[proto])),
+                        "count": len(pa.jitter_values[proto])
+                    }
+        
+        # Add packet loss statistics
+        if hasattr(pa, 'calculate_packet_loss'):
+            loss_stats = pa.calculate_packet_loss()
+            result["analysis"]["packet_loss"] = loss_stats
+        
+        # Add IoT metrics
+        if hasattr(pa, 'iot_metrics'):
+            # Bundle sizes
+            if pa.iot_metrics.get('bundle_sizes'):
+                result["analysis"]["iot_metrics"]["bundle_sizes"] = pa.iot_metrics['bundle_sizes']
+            
+            # Aggregation intervals
+            if pa.iot_metrics.get('aggregation_intervals'):
+                result["analysis"]["iot_metrics"]["aggregation_intervals"] = pa.iot_metrics['aggregation_intervals']
+            
+            # Device patterns
+            if pa.iot_metrics.get('device_patterns'):
+                for device, patterns in pa.iot_metrics['device_patterns'].items():
+                    small_pkts = sum(1 for p in patterns if p.get('type') == 'small')
+                    bundle_pkts = sum(1 for p in patterns if p.get('type') == 'bundle')
+                    result["analysis"]["iot_metrics"]["device_patterns"][device] = {
+                        "small_packets": small_pkts,
+                        "bundled_packets": bundle_pkts,
+                        "total": small_pkts + bundle_pkts
+                    }
+    except Exception as e:
+        print(f"Error during analysis: {e}")
+        # Continue with the data we have so far
     
     return jsonify(result)
 
