@@ -454,7 +454,8 @@ export default function Page() {
           // Set the data directly
           setData(apiData);
           setError(null);
-        } catch (apiErr) {
+        } catch (error) {
+          const apiErr = error as Error;
           console.error('API fetch failed:', apiErr);
           throw new Error(`Failed to fetch data: ${apiErr.message}`);
         }

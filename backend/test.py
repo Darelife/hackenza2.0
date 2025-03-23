@@ -294,6 +294,105 @@ class PacketAnalyzer:
         plt.close()  # Close the figure since we don't need it
         
         return distribution_data
+    
+    def get_packet_size_distribution(self):
+        """Generate packet size distribution data for plotting"""
+        distribution_data = {}
+        
+        plt.figure(figsize=(12, 6))
+        
+        for proto in self.packet_sizes:
+            # Filter out negative sizes
+            positive_sizes = [size for size in self.packet_sizes[proto] if size >= 0]
+            if positive_sizes:
+                kde = sns.kdeplot(data=positive_sizes, label=proto)
+                
+                line = kde.lines[-1]
+                xdata = line.get_xdata()
+                ydata = line.get_ydata()
+                
+                # Store coordinates in the distribution data
+                distribution_data[proto] = {
+                    'x': [float(x) for x in xdata if x >= 0],  # Convert to float for JSON serialization
+                    'y': [float(y) for y in ydata if y >= 0]   # Convert to float for JSON serialization
+                }
+        
+        plt.close()  # Close the figure since we don't need it
+        
+        return distribution_data
+    
+    def get_size_delay_correlation(self):
+        """Generate size vs delay correlation data for plotting"""
+        correlation_data = {}
+        
+        for proto in self.latencies:
+            # Get corresponding sizes and delays for the protocol
+            sizes = []
+            delays = []
+            for i, delay in enumerate(self.latencies[proto]):
+                if i < len(self.packet_sizes[proto]):  # Ensure we have both size and delay
+                    size = self.packet_sizes[proto][i]
+                    # Only include points with non-negative values
+                    if delay >= 0 and size >= 0:
+                        sizes.append(float(size))
+                        delays.append(float(delay))
+        
+            if sizes and delays:  # Only include protocols with data
+                correlation_data[proto] = {
+                    'x': sizes,    # packet sizes
+                    'y': delays    # corresponding delays
+                }
+        
+        return correlation_data
+    
+    def get_latency_timeline(self):
+        """Generate latency timeline data for plotting"""
+        timeline_data = {}
+        
+        for proto in self.latencies:
+            # Get timestamps and latencies for the protocol
+            timestamps = []
+            latencies = []
+            for i, latency in enumerate(self.latencies[proto]):
+                if i < len(self.timestamps[proto]):  # Ensure we have both timestamp and latency
+                    timestamp = self.timestamps[proto][i]
+                    # Only include points with non-negative values
+                    if latency >= 0 and timestamp >= 0:
+                        timestamps.append(float(timestamp))
+                        latencies.append(float(latency))
+        
+            if timestamps and latencies:  # Only include protocols with data
+                timeline_data[proto] = {
+                    'x': timestamps,    # timestamps
+                    'y': latencies     # corresponding latencies
+                }
+    
+        return timeline_data
+    def get_jitter_distribution(self):
+        """Generate jitter distribution data for plotting"""
+        distribution_data = {}
+        
+        plt.figure(figsize=(12, 6))
+        
+        for proto in self.jitter_values:
+            # Filter out negative jitter values (though they should already be non-negative)
+            positive_jitter = [j for j in self.jitter_values[proto] if j >= 0]
+            if positive_jitter:
+                kde = sns.kdeplot(data=positive_jitter, label=proto)
+                
+                line = kde.lines[-1]
+                xdata = line.get_xdata()
+                ydata = line.get_ydata()
+                
+                # Store coordinates in the distribution data
+                distribution_data[proto] = {
+                    'x': [float(x) for x in xdata if x >= 0],  # Convert to float for JSON serialization
+                    'y': [float(y) for y in ydata if y >= 0]   # Convert to float for JSON serialization
+                }
+        
+        plt.close()  # Close the figure since we don't need it
+        
+        return distribution_data
 
     def _get_protocol(self, pkt):
         """Determine packet protocol with expanded protocol detection"""
