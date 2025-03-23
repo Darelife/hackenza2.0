@@ -15,45 +15,7 @@ import {
 import { MultiLineChart } from '../components/multi-line-chart';
 import { useState, useEffect } from 'react';
 
-// Function to process CSV data
-const processLatencyData = (csvString: string) => {
-  const lines = csvString.split('\n');
-  const data: Record<string, { x: number[]; y: number[] }> = {};
-
-  let currentProtocol = '';
-  let xValues: number[] = [];
-  let yValues: number[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line || line.startsWith('//')) continue;
-
-    const parts = line.split(',');
-    if (parts.length === 3) {
-      const protocol = parts[0];
-      const x = parseFloat(parts[1]);
-      const y = parseFloat(parts[2]);
-
-      if (currentProtocol !== protocol) {
-        if (currentProtocol && xValues.length > 0) {
-          data[currentProtocol] = { x: xValues, y: yValues };
-        }
-        currentProtocol = protocol;
-        xValues = [];
-        yValues = [];
-      }
-
-      xValues.push(x);
-      yValues.push(y);
-    }
-  }
-
-  if (currentProtocol && xValues.length > 0) {
-    data[currentProtocol] = { x: xValues, y: yValues };
-  }
-
-  return data;
-};
+// Remove the CSV processing function as we don't need it anymore
 
 export default function VisualizationPage() {
   const [latencyData, setLatencyData] = useState<Record<
@@ -67,28 +29,32 @@ export default function VisualizationPage() {
     setIsLoading(true);
     setError(null);
 
-    // Fetch the CSV file from public directory
-    // (where Next.js exposes static files)
-    fetch('/latency_distribution_coordinates.csv')
+    // Fetch the JSON file from public directory instead of CSV
+    fetch('/latency_distribution.json')
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`Failed to load CSV file: ${response.status}`);
+          throw new Error(`Failed to load JSON file: ${response.status}`);
         }
-        return response.text();
+        return response.json();
       })
-      .then((csvText) => {
+      .then((jsonData) => {
         try {
-          const processedData = processLatencyData(csvText);
-          setLatencyData(processedData);
-          console.log('Data loaded successfully:', Object.keys(processedData));
+          // Extract the data from the JSON structure
+          // Based on your sample JSON, the data is nested in a "data" property
+          if (jsonData && jsonData.data) {
+            setLatencyData(jsonData.data);
+            console.log('Data loaded successfully:', Object.keys(jsonData.data));
+          } else {
+            throw new Error('Invalid JSON structure: missing data property');
+          }
         } catch (err) {
-          console.error('Error processing CSV data:', err);
-          setError(`Error processing CSV data: ${err}`);
+          console.error('Error processing JSON data:', err);
+          setError(`Error processing JSON data: ${err}`);
         }
       })
       .catch((err) => {
-        console.error('Error fetching CSV:', err);
-        setError(`Error fetching CSV: ${err.message}`);
+        console.error('Error fetching JSON:', err);
+        setError(`Error fetching JSON: ${err.message}`);
       })
       .finally(() => {
         setIsLoading(false);

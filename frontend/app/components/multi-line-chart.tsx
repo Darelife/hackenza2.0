@@ -11,7 +11,7 @@ const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 interface MultiLineChartProps {
   title: string;
   data?: any[]; // Traditional data format
-  latencyData?: Record<string, { x: number[]; y: number[] }>; // CSV-style data format
+  latencyData?: Record<string, { x: number[]; y: number[] }>; // JSON-style data format
   xAxisLabel?: string;
   yAxisLabel?: string;
   className?: string;
@@ -52,21 +52,29 @@ export function MultiLineChart({
 
     if (latencyData && Object.keys(latencyData).length > 0) {
       // Create a simple plotly dataset from the latency data
-      const formattedData = Object.keys(latencyData).map((protocol, index) => {
-        const values = latencyData[protocol];
+      const formattedData = Object.keys(latencyData)
+        .map((protocol, index) => {
+          const values = latencyData[protocol];
 
-        return {
-          x: values.x,
-          y: values.y,
-          type: 'scatter',
-          mode: 'lines',
-          name: protocol,
-          line: {
-            color: colors[index % colors.length],
-            width: 2,
-          },
-        };
-      });
+          // Skip protocols with empty data
+          if (!values.y || values.y.length === 0) {
+            console.log(`Skipping ${protocol} due to empty data`);
+            return null;
+          }
+
+          return {
+            x: values.x,
+            y: values.y,
+            type: 'scatter',
+            mode: 'lines',
+            name: protocol,
+            line: {
+              color: colors[index % colors.length],
+              width: 2,
+            },
+          };
+        })
+        .filter(Boolean); // Remove null entries
 
       setPlotData(formattedData);
     } else {
@@ -92,17 +100,33 @@ export function MultiLineChart({
               data={plotData}
               layout={{
                 autosize: true,
-                margin: { l: 50, r: 20, t: 20, b: 50 },
+                margin: { l: 60, r: 20, t: 20, b: 60 },
                 height: height,
                 xaxis: {
-                  title: xAxisLabel,
+                  title: {
+                    text: xAxisLabel,
+                    font: { size: 14 },
+                  },
+                  showgrid: true,
+                  gridcolor: 'rgba(0,0,0,0.1)',
                 },
                 yaxis: {
-                  title: yAxisLabel,
+                  title: {
+                    text: yAxisLabel,
+                    font: { size: 14 },
+                  },
+                  showgrid: true,
+                  gridcolor: 'rgba(0,0,0,0.1)',
+                },
+                legend: {
+                  orientation: 'h',
+                  y: -0.2,
                 },
               }}
               config={{
                 responsive: true,
+                displayModeBar: true,
+                scrollZoom: true,
               }}
               style={{ width: '100%', height: '100%' }}
             />
