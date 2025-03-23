@@ -2,7 +2,7 @@
 === PCAP ANALYSIS DETAILED REPORT ===
 =====================================
 
-File: /Users/harsh/Desktop/hackenza2.0/backend/pcapngFiles/28-1-25-bro-rpi-60ms.pcapng
+File: /home/soham/Documents/hackenza2.0/backend/pcapngFiles/28-1-25-bro-rpi-60ms.pcapng
 Total Packets: 33797
 
 Capture Duration: 159.68 seconds
@@ -78,7 +78,7 @@ IPv6 Statistics:
   Packet Count: 22688
   Average Latency: 2.90 ms
   Max Latency: 408.54 ms
-  Min Latency: -0.00 ms
+  Min Latency: 0.00 ms
   Std Dev Latency: 17.81 ms
   Average Jitter: 4.97 ms
   Average Packet Size: 846.66 bytes
@@ -215,18 +215,6 @@ UDP:
 === IoT Traffic Analysis ===
 
 Device Transmission Patterns:
-
-  Device 192.168.70.97:
-    Small Packets: 1577
-    Bundled Packets: 0
-
-  Device 192.168.70.208:
-    Small Packets: 4574
-    Bundled Packets: 3
-
-  Device 192.168.70.187:
-    Small Packets: 3653
-    Bundled Packets: 0
 
 === Detailed Delay Analysis ===
 

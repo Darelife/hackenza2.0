@@ -560,41 +560,38 @@ class PacketAnalyzer:
     def _plot_latency_distribution(self, output_dir):
         plt.figure(figsize=(12, 6))
         
-        # Create both txt and csv files
-        with open(f'{output_dir}/latency_distribution_coordinates.txt', 'w') as txt_file, \
-             open(f'{output_dir}/latency_distribution_coordinates.csv', 'w') as csv_file:
-            
-            # Write headers
-            txt_file.write("Protocol\tX-coordinate\tY-coordinate\n")
-            csv_file.write("Protocol,X-coordinate,Y-coordinate\n")
-            
-            for proto in self.latencies:
-                # Filter out negative latencies
-                positive_latencies = [lat for lat in self.latencies[proto] if lat >= 0]
-                if positive_latencies:
-                    kde = sns.kdeplot(data=positive_latencies, label=proto)
-                    
-                    line = kde.lines[-1]
-                    xdata = line.get_xdata()
-                    ydata = line.get_ydata()
-                    
-                    # Write coordinates to both files
-                    for x, y in zip(xdata, ydata):
-                        if x >= 0:
-                            txt_file.write(f"{proto}\t{x:.6f}\t{y:.6f}\n")
-                            csv_file.write(f"{proto},{x:.6f},{y:.6f}\n")
-                    
-                    # Add separator between protocols
-                    txt_file.write("\n")
-                    csv_file.write("\n")
+        # Create data structure for JSON
+        distribution_data = {}
         
-        plt.xlabel('Latency (ms)')
-        plt.ylabel('Density')
-        plt.title('Latency Distribution by Protocol')
-        plt.legend()
-        plt.xlim(left=0)  # Force x-axis to start at 0
-        plt.savefig(f'{output_dir}/latency_distribution.png')
-        plt.close()
+        for proto in self.latencies:
+            # Filter out negative latencies
+            positive_latencies = [lat for lat in self.latencies[proto] if lat >= 0]
+            if positive_latencies:
+                kde = sns.kdeplot(data=positive_latencies, label=proto)
+                
+                line = kde.lines[-1]
+                xdata = line.get_xdata()
+                ydata = line.get_ydata()
+                
+                # Store coordinates in the distribution data
+                distribution_data[proto] = {
+                    'x': [float(x) for x in xdata if x >= 0],  # Convert to float for JSON serialization
+                    'y': [float(y) for y in ydata if y >= 0]   # Convert to float for JSON serialization
+                }
+        
+        plt.close()  # Close the figure since we don't need to save it
+        
+        # Send data to API endpoint
+        try:
+            import requests
+            response = requests.post(
+                'http://localhost:8000/api/graph/latency_distribution',
+                json=distribution_data
+            )
+            if response.status_code != 200:
+                print(f"Error sending latency distribution data: {response.text}")
+        except Exception as e:
+            print(f"Error sending data to API: {str(e)}")
 
     def _plot_latency_timeline(self, output_dir):
         plt.figure(figsize=(15, 7))
@@ -978,6 +975,32 @@ class PacketAnalyzer:
         for port, count in sorted(overview['port_stats']['destinations'].items(), key=lambda x: x[1], reverse=True)[:5]:
             percentage = (count / len(self.packets)) * 100
             print(f"  Port {port:<6} : {count:>6} packets ({percentage:>6.2f}%)")
+
+    def get_latency_distribution(self):
+        """Generate latency distribution data for plotting"""
+        distribution_data = {}
+        
+        plt.figure(figsize=(12, 6))
+        
+        for proto in self.latencies:
+            # Filter out negative latencies
+            positive_latencies = [lat for lat in self.latencies[proto] if lat >= 0]
+            if positive_latencies:
+                kde = sns.kdeplot(data=positive_latencies, label=proto)
+                
+                line = kde.lines[-1]
+                xdata = line.get_xdata()
+                ydata = line.get_ydata()
+                
+                # Store coordinates in the distribution data
+                distribution_data[proto] = {
+                    'x': [float(x) for x in xdata if x >= 0],  # Convert to float for JSON serialization
+                    'y': [float(y) for y in ydata if y >= 0]   # Convert to float for JSON serialization
+                }
+        
+        plt.close()  # Close the figure since we don't need it
+        
+        return distribution_data
 
 def main():
     # Use relative path from the script's location

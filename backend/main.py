@@ -466,5 +466,28 @@ def submit_data():
     return jsonify({"status": "success", "received": data})
 
 
+@app.route("/api/graph/latency_distribution", methods=["GET"])
+def latency_distribution():
+    try:
+        # For GET requests, use a default file or get from query params
+        pcap_file = request.args.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng")
+        
+        if not os.path.exists(pcap_file):
+            return jsonify({"error": "PCAP file not found"}), 404
+        
+        # Create PacketAnalyzer instance and analyze delays first
+        pa = PacketAnalyzer(pcap_file)
+        pa.analyze_delays()
+        distribution_data = pa.get_latency_distribution()
+        
+        return jsonify({
+            "status": "success",
+            "data": distribution_data
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.run(port=8000, debug=True)
