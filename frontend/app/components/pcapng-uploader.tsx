@@ -7,6 +7,9 @@ import { AlertCircle, File, Loader2, Upload, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 
+// Define API base URL
+const API_BASE_URL = 'http://localhost:8000';
+
 export default function PcapngUploader() {
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -118,7 +121,7 @@ export default function PcapngUploader() {
       });
 
       // Send the request
-      xhr.open('POST', 'http://127.0.0.1:5000/api/upload');
+      xhr.open('POST', `${API_BASE_URL}/api/upload`);
       xhr.send(formData);
 
       // Wait for the upload to complete
