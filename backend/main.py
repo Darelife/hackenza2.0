@@ -106,11 +106,28 @@ def upload_file():
                 }
             },
             "packets": [],
-            "data_distribution" : []
+            "data_distribution" : [],
+            "packet_size_distribution" : [],
+            "delay_correlation" : [],
+            "latency_timeline" : [],
+            "jitter_distribution" : []
         }
 
         distribution_data = pa.get_latency_distribution()
         result["data_distribution"] = distribution_data
+
+        packet_size_distribution = pa.get_packet_size_distribution()
+        result["packet_size_distribution"] = packet_size_distribution
+
+        # delay_correlation = pa.get_delay_correlation()
+        # result["delay_correlation"] = delay_correlation
+
+        latency_timeline = pa.get_latency_timeline()
+        result["latency_timeline"] = latency_timeline
+
+        jitter_distribution = pa.get_jitter_distribution()
+        result["jitter_distribution"] = jitter_distribution
+
         
         # Fill in protocol data
         for proto, count in sorted(overview['protocols'].items(), key=lambda x: x[1], reverse=True):
