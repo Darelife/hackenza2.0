@@ -71,7 +71,7 @@ def get_overview():
     return jsonify(data)
 
 
-@app.route("/api/analyzeOverview", methods=["GET", "POST"])
+@app.route("/api/analyzeOverview", methods=["GET"])
 def analyze_overview():
     # For GET requests, use a default file or get from query params
     if request.method == "GET":
