@@ -8,6 +8,7 @@ import os
 import json
 import tempfile
 from datetime import datetime
+from scapy.all import IP, TCP, UDP
 from test import PacketAnalyzer
 
 app = Flask(__name__)
@@ -82,7 +83,7 @@ def upload_file():
                     "aggregation_intervals": [],
                     "device_patterns": {}
                 }
-            }
+            },
         }
         
         # Fill in protocol data
@@ -268,6 +269,72 @@ def get_overview():
     data["total_packets"] = total_packets
     return jsonify(data)
 
+@app.route("/api/getAllPackets", methods=["GET"])
+def get_all_packets():
+    # For GET requests, use a default file or get from query params
+    pcap_file = request.args.get('pcap_file', "./pcapngFiles/28-1-25-bro-laptp-20ms.pcapng")
+    
+    if not os.path.exists(pcap_file):
+        return jsonify({"error": "PCAP file not found"}), 404
+    
+    try:
+        pa = PacketAnalyzer(pcap_file)
+        all_packets = pa.getAllPackets()
+        
+        # Convert Scapy packets to a serializable format
+        packet_list = []
+        for i, pkt in enumerate(all_packets):
+            packet_info = {
+                "number": i + 1,
+                "time": str(datetime.fromtimestamp(float(pkt.time))),
+                "length": len(pkt),
+                "protocol": "Unknown",
+                "source": "",
+                "destination": "",
+                "info": ""
+            }
+            
+            # Extract common fields if available
+            if IP in pkt:
+                packet_info["source"] = pkt[IP].src
+                packet_info["destination"] = pkt[IP].dst
+                
+                # Determine protocol
+                if TCP in pkt:
+                    packet_info["protocol"] = "TCP"
+                    src_port = pkt[TCP].sport
+                    dst_port = pkt[TCP].dport
+                    packet_info["info"] = f"TCP {src_port} → {dst_port} [SYN: {pkt[TCP].flags.S}, ACK: {pkt[TCP].flags.A}, FIN: {pkt[TCP].flags.F}]"
+                elif UDP in pkt:
+                    packet_info["protocol"] = "UDP"
+                    src_port = pkt[UDP].sport
+                    dst_port = pkt[UDP].dport
+                    packet_info["info"] = f"UDP {src_port} → {dst_port} Len={len(pkt[UDP].payload)}"
+                else:
+                    packet_info["protocol"] = "IP"
+                    packet_info["info"] = f"IP Protocol: {pkt[IP].proto}"
+            
+            # If we couldn't determine protocol from IP, try other common protocols
+            elif 'ARP' in pkt:
+                packet_info["protocol"] = "ARP"
+                if hasattr(pkt.getlayer('ARP'), 'psrc') and hasattr(pkt.getlayer('ARP'), 'pdst'):
+                    packet_info["source"] = pkt.getlayer('ARP').psrc
+                    packet_info["destination"] = pkt.getlayer('ARP').pdst
+                    packet_info["info"] = f"Who has {pkt.getlayer('ARP').pdst}? Tell {pkt.getlayer('ARP').psrc}"
+            elif 'IPv6' in pkt:
+                packet_info["protocol"] = "IPv6"
+                if hasattr(pkt.getlayer('IPv6'), 'src') and hasattr(pkt.getlayer('IPv6'), 'dst'):
+                    packet_info["source"] = pkt.getlayer('IPv6').src
+                    packet_info["destination"] = pkt.getlayer('IPv6').dst
+                    packet_info["info"] = f"IPv6 {pkt.getlayer('IPv6').nh}"
+            
+            packet_list.append(packet_info)
+        
+        return jsonify({"AllPackets": packet_list})
+        
+    except Exception as e:
+        print(f"Error retrieving packets: {str(e)}")
+        return jsonify({"error": str(e), "AllPackets": []}), 500
 
 @app.route("/api/analyzeOverview", methods=["GET"])
 def analyze_overview():
@@ -323,8 +390,60 @@ def analyze_overview():
                 "aggregation_intervals": [],
                 "device_patterns": {}
             }
-        }
+        },
+        "packets": []
     }
+
+    all_packets = pa.getAllPackets()
+        
+        # Convert Scapy packets to a serializable format
+    packet_list = []
+    for i, pkt in enumerate(all_packets):
+        packet_info = {
+            "number": i + 1,
+            "time": str(datetime.fromtimestamp(float(pkt.time))),
+            "length": len(pkt),
+            "protocol": "Unknown",
+            "source": "",
+            "destination": "",
+            "info": ""
+        }
+        
+        # Extract common fields if available
+        if IP in pkt:
+            packet_info["source"] = pkt[IP].src
+            packet_info["destination"] = pkt[IP].dst
+            
+            # Determine protocol
+            if TCP in pkt:
+                packet_info["protocol"] = "TCP"
+                src_port = pkt[TCP].sport
+                dst_port = pkt[TCP].dport
+                packet_info["info"] = f"TCP {src_port} → {dst_port} [SYN: {pkt[TCP].flags.S}, ACK: {pkt[TCP].flags.A}, FIN: {pkt[TCP].flags.F}]"
+            elif UDP in pkt:
+                packet_info["protocol"] = "UDP"
+                src_port = pkt[UDP].sport
+                dst_port = pkt[UDP].dport
+                packet_info["info"] = f"UDP {src_port} → {dst_port} Len={len(pkt[UDP].payload)}"
+            else:
+                packet_info["protocol"] = "IP"
+                packet_info["info"] = f"IP Protocol: {pkt[IP].proto}"
+        
+        # If we couldn't determine protocol from IP, try other common protocols
+        elif 'ARP' in pkt:
+            packet_info["protocol"] = "ARP"
+            if hasattr(pkt.getlayer('ARP'), 'psrc') and hasattr(pkt.getlayer('ARP'), 'pdst'):
+                packet_info["source"] = pkt.getlayer('ARP').psrc
+                packet_info["destination"] = pkt.getlayer('ARP').pdst
+                packet_info["info"] = f"Who has {pkt.getlayer('ARP').pdst}? Tell {pkt.getlayer('ARP').psrc}"
+        elif 'IPv6' in pkt:
+            packet_info["protocol"] = "IPv6"
+            if hasattr(pkt.getlayer('IPv6'), 'src') and hasattr(pkt.getlayer('IPv6'), 'dst'):
+                packet_info["source"] = pkt.getlayer('IPv6').src
+                packet_info["destination"] = pkt.getlayer('IPv6').dst
+                packet_info["info"] = f"IPv6 {pkt.getlayer('IPv6').nh}"
+        
+        packet_list.append(packet_info)
     
     # Protocol distribution
     for proto, count in sorted(overview['protocols'].items(), key=lambda x: x[1], reverse=True):
@@ -383,6 +502,7 @@ def analyze_overview():
                 "packets": count,
                 "percentage": percentage
             })
+
     
     # Perform analysis
     try:
@@ -448,6 +568,10 @@ def analyze_overview():
                         "bundled_packets": bundle_pkts,
                         "total": small_pkts + bundle_pkts
                     }
+            
+            result["packets"] = packet_list
+        
+
     except Exception as e:
         print(f"Error during analysis: {e}")
         # Continue with the data we have so far

@@ -75,6 +75,9 @@ class PacketAnalyzer:
         }
         return stats
 
+    def getAllPackets(self):
+        return self.packets
+
     def analyze_delays(self):
         """Analyze various types of delays and packet loss"""
         print("\nAnalyzing TCP sequence numbers and IoT patterns...")
