@@ -85,6 +85,7 @@ export default function PcapngUploader() {
       formData.append('file', file);
 
       // Use XMLHttpRequest to track upload progress
+      localStorage.setItem('formData', JSON.stringify(formData));
       const xhr = new XMLHttpRequest();
 
       xhr.upload.addEventListener('progress', (event) => {
@@ -124,6 +125,8 @@ export default function PcapngUploader() {
       // Send the request
       xhr.open('POST', `${API_BASE_URL}/api/upload`);
       xhr.send(formData);
+
+      // save the formdata to local storage
 
       // Wait for the upload to complete
       const data = await uploadPromise;

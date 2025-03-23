@@ -40,6 +40,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { parse } from 'path';
 
 // Define interfaces for packet data
 interface Packet {
@@ -87,56 +88,113 @@ export default function SearchPage() {
       try {
         setLoading(true);
 
-        // Check if we have analysis data in localStorage
-        const savedAnalysis = localStorage.getItem('analysisData');
+        // // Check if we have analysis data in localStorage
+        // // const savedAnalysis = localStorage.getItem('analysisData');
+        // const formData = localStorage.getItem('formData');
+        // console.log('formData:', formData);
 
+        // const xhr = new XMLHttpRequest();
+        // xhr.open('GET', `${API_BASE_URL}/api/getAllPackets`, true);
+        // xhr.setRequestHeader('Content-Type', 'application/json');
+        // xhr.send(formData);
+
+        // const apiData = await new Promise<any>((resolve, reject) => {
+        //   xhr.onload = () => {
+        //     if (xhr.status >= 200 && xhr.status < 300) {
+        //       try {
+        //         const data = JSON.parse(xhr.responseText);
+        //         resolve(data);
+        //       } catch (e) {
+        //         reject(new Error('Invalid response from server'));
+        //       }
+        //     } else {
+        //       reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+        //     }
+        //   };
+          
+        //   xhr.onerror = () => {
+        //     reject(new Error('Network error occurred'));
+        //   };
+        // });
+
+        // if (savedAnalysis) {
+        //   try {
+        //     const parsedAnalysis = JSON.parse(savedAnalysis);
+        //     setAnalysisInfo({
+        //       originalFilename: parsedAnalysis.originalFilename,
+        //       timestamp: parsedAnalysis.timestamp,
+        //     });
+
+        //     // Check for AllPackets in the data structure
+        //     if (parsedAnalysis.data && parsedAnalysis.data.AllPackets) {
+        //       setAllPackets(parsedAnalysis.data.AllPackets);
+        //       setFilteredPackets(parsedAnalysis.data.AllPackets);
+        //       console.log('Packet data from localStorage:', parsedAnalysis.data.AllPackets);
+        //       setError(null);
+        //       return; // Exit early since we have data
+        //     }
+            
+        //     // For backward compatibility - try other possible structures
+        //     if (parsedAnalysis.AllPackets) {
+        //       setAllPackets(parsedAnalysis.AllPackets);
+        //       setFilteredPackets(parsedAnalysis.AllPackets);
+        //       console.log('Packet data from localStorage (alternative format):', parsedAnalysis.AllPackets);
+        //       setError(null);
+        //       return;
+        //     }
+        //   } catch (e) {
+        //     console.error('Error parsing analysis data:', e);
+        //     // Fall through to API request if parsing fails
+        //   }
+        // }
+
+        // If we don't have usable localStorage data, fetch from API
+        // const response = await fetch(`${API_BASE_URL}/api/getAllPackets`);
+
+        // console.log('API response:', apiData);
+        // console.log('API response:', apiData);
+        
+        // if (apiData.AllPackets && Array.isArray(apiData.AllPackets)) {
+        //   setAllPackets(apiData.AllPackets);
+        //   setFilteredPackets(apiData.AllPackets);
+        //   setError(null);
+        // } else {
+        //   throw new Error('Invalid packet data structure received from API');
+        // }
+        // get data from the localstorage : analysisData
+        const savedAnalysis = localStorage.getItem('analysisData');
         if (savedAnalysis) {
+          // set the packets data from the localstorage
           try {
             const parsedAnalysis = JSON.parse(savedAnalysis);
-            setAnalysisInfo({
-              originalFilename: parsedAnalysis.originalFilename,
-              timestamp: parsedAnalysis.timestamp,
-            });
-
-            // Check for AllPackets in the data structure
-            if (parsedAnalysis.data && parsedAnalysis.data.AllPackets) {
-              setAllPackets(parsedAnalysis.data.AllPackets);
-              setFilteredPackets(parsedAnalysis.data.AllPackets);
-              console.log('Packet data from localStorage:', parsedAnalysis.data.AllPackets);
-              setError(null);
-              return; // Exit early since we have data
-            }
+            console.log('Parsed analysis data:', parsedAnalysis);
             
-            // For backward compatibility - try other possible structures
-            if (parsedAnalysis.AllPackets) {
-              setAllPackets(parsedAnalysis.AllPackets);
-              setFilteredPackets(parsedAnalysis.AllPackets);
-              console.log('Packet data from localStorage (alternative format):', parsedAnalysis.AllPackets);
+            // Check if we have a valid data structure
+            if (parsedAnalysis.data && parsedAnalysis.data.packets) {
+              setAllPackets(parsedAnalysis.data.packets);
+              setFilteredPackets(parsedAnalysis.data.packets);
+              
+              // Set analysis metadata if available
+              if (parsedAnalysis.originalFilename && parsedAnalysis.timestamp) {
+                setAnalysisInfo({
+                  originalFilename: parsedAnalysis.originalFilename,
+                  timestamp: parsedAnalysis.timestamp,
+                });
+              }
               setError(null);
-              return;
+            } else if (parsedAnalysis.packets) {
+              // Alternative data structure
+              setAllPackets(parsedAnalysis.packets);
+              setFilteredPackets(parsedAnalysis.packets);
+              setError(null);
+            } else {
+              console.error('Invalid packet data structure:', parsedAnalysis);
+              throw new Error('Invalid packet data structure in localStorage');
             }
           } catch (e) {
             console.error('Error parsing analysis data:', e);
-            // Fall through to API request if parsing fails
+            throw new Error('Failed to parse saved analysis data');
           }
-        }
-
-        // If we don't have usable localStorage data, fetch from API
-        const response = await fetch(`${API_BASE_URL}/api/getAllPackets`);
-
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.status}`);
-        }
-
-        const apiData = await response.json();
-        console.log('API response:', apiData);
-        
-        if (apiData.AllPackets && Array.isArray(apiData.AllPackets)) {
-          setAllPackets(apiData.AllPackets);
-          setFilteredPackets(apiData.AllPackets);
-          setError(null);
-        } else {
-          throw new Error('Invalid packet data structure received from API');
         }
       } catch (err) {
         console.error('Failed to fetch data:', err);

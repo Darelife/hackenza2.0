@@ -84,6 +84,7 @@ def upload_file():
                     "device_patterns": {}
                 }
             },
+            "packets": []
         }
         
         # Fill in protocol data
@@ -208,6 +209,60 @@ def upload_file():
                             "bundled_packets": bundle_pkts,
                             "total": len(patterns)
                         }
+                
+            # Add packet list as well
+            all_packets = pa.getAllPackets()
+            packet_list = []
+            for i, pkt in enumerate(all_packets):
+                packet_info = {
+                    "number": i + 1,
+                    "time": str(datetime.fromtimestamp(float(pkt.time))),
+                    "length": len(pkt),
+                    "protocol": "Unknown",
+                    "source": "",
+                    "destination": "",
+                    "info": ""
+                }
+                
+                # Extract common fields if available
+                if IP in pkt:
+                    packet_info["source"] = pkt[IP].src
+                    packet_info["destination"] = pkt[IP].dst
+                    
+                    # Determine protocol
+                    if TCP in pkt:
+                        packet_info["protocol"] = "TCP"
+                        src_port = pkt[TCP].sport
+                        dst_port = pkt[TCP].dport
+                        packet_info["info"] = f"TCP {src_port} → {dst_port} [SYN: {pkt[TCP].flags.S}, ACK: {pkt[TCP].flags.A}, FIN: {pkt[TCP].flags.F}]"
+                    elif UDP in pkt:
+                        packet_info["protocol"] = "UDP"
+                        src_port = pkt[UDP].sport
+                        dst_port = pkt[UDP].dport
+                        packet_info["info"] = f"UDP {src_port} → {dst_port} Len={len(pkt[UDP].payload)}"
+                    else:
+                        packet_info["protocol"] = "IP"
+                        packet_info["info"] = f"IP Protocol: {pkt[IP].proto}"
+                
+                # If we couldn't determine protocol from IP, try other common protocols
+                elif 'ARP' in pkt:
+                    packet_info["protocol"] = "ARP"
+                    if hasattr(pkt.getlayer('ARP'), 'psrc') and hasattr(pkt.getlayer('ARP'), 'pdst'):
+                        packet_info["source"] = pkt.getlayer('ARP').psrc
+                        packet_info["destination"] = pkt.getlayer('ARP').pdst
+                        packet_info["info"] = f"Who has {pkt.getlayer('ARP').pdst}? Tell {pkt.getlayer('ARP').psrc}"
+                elif 'IPv6' in pkt:
+                    packet_info["protocol"] = "IPv6"
+                    if hasattr(pkt.getlayer('IPv6'), 'src') and hasattr(pkt.getlayer('IPv6'), 'dst'):
+                        packet_info["source"] = pkt.getlayer('IPv6').src
+                        packet_info["destination"] = pkt.getlayer('IPv6').dst
+                        packet_info["info"] = f"IPv6 {pkt.getlayer('IPv6').nh}"
+                
+                packet_list.append(packet_info)
+            
+            result["packets"] = packet_list
+
+            
         except Exception as analysis_err:
             print(f"Error during analysis: {analysis_err}")
             # Continue with basic data even if analysis fails
