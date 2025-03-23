@@ -36,35 +36,37 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ApiResponse | null>(null);
+  const [analysisInfo, setAnalysisInfo] = useState<any>(null);
 
+  // Load data either from localStorage (if user uploaded a file) or from the API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Try to fetch formData from localStorage
-        const storedFormData = localStorage.getItem('formData');
-        let formData = null;
 
-        if (storedFormData) {
-          try {
-            formData = JSON.parse(storedFormData);
-            console.log('Retrieved form data from localStorage:', formData);
-          } catch (err) {
-            console.error('Failed to parse form data from localStorage:', err);
+        // Check if we have analysis data in localStorage
+        if (typeof window !== 'undefined') {
+          const savedAnalysis = localStorage.getItem('analysisData');
+
+          if (savedAnalysis) {
+            try {
+              const parsedAnalysis = JSON.parse(savedAnalysis);
+              setAnalysisInfo({
+                originalFilename: parsedAnalysis.originalFilename,
+                timestamp: parsedAnalysis.timestamp,
+              });
+              setData(parsedAnalysis.data);
+              setError(null);
+              return; // Exit early since we have data
+            } catch (e) {
+              console.error('Error parsing analysis data:', e);
+              // Fall through to API request if parsing fails
+            }
           }
         }
 
-        // const response = await fetch('http://127.0.0.1:5000/api/getOverview');
-        // send the file to the backend
-        // const response = await fetch('/api/upload', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-        
-       const response = await fetch('http://localhost:5000/api/getOverview', {
-          method: 'GET',
-          body: formData,
-        });
+        // If we don't have localStorage data, fetch from API
+        const response = await fetch('http://localhost:5000/api/getOverview');
 
         if (!response.ok) {
           throw new Error(`API Error: ${response.status}`);
@@ -76,7 +78,7 @@ export default function Page() {
       } catch (err) {
         console.error('Failed to fetch data:', err);
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
-        // Fall back to sample data if API fails
+        // Fall back to sample data
         setData({
           Protocol: [
             { name: 'MQTT', packets: 8524, percentage: 97.23 },
@@ -97,7 +99,6 @@ export default function Page() {
           total_packets: 9323,
         });
       } finally {
-        // We intentionally delay disabling loading state to allow skeletons to be visible
         setTimeout(() => setLoading(false), 500);
       }
     };
@@ -121,6 +122,17 @@ export default function Page() {
           </Breadcrumb>
         </header>
         <div className='flex flex-1 flex-col gap-4 p-4'>
+          {analysisInfo && analysisInfo.originalFilename && (
+            <div className='p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md text-sm'>
+              <p className='font-medium'>
+                Analyzed: {analysisInfo.originalFilename}
+              </p>
+              <p className='text-muted-foreground text-xs'>
+                Uploaded on {new Date(analysisInfo.timestamp).toLocaleString()}
+              </p>
+            </div>
+          )}
+
           <div className='grid auto-rows-min gap-4 md:grid-cols-2 lg:grid-cols-2'>
             <DataCard
               title='Packet Count'
