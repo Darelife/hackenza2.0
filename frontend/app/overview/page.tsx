@@ -66,7 +66,7 @@ export default function Page() {
         }
 
         // If we don't have localStorage data, fetch from API
-        const response = await fetch('http://127.0.0.1:5000/api/getOverview');
+        const response = await fetch('http://localhost:5000/api/getOverview');
 
         if (!response.ok) {
           throw new Error(`API Error: ${response.status}`);

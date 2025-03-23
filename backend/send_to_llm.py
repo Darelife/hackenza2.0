@@ -39,6 +39,7 @@ def main():
     # Create a client instance
     gemini = GeminiClient(api_key)
     
+    
     # Generate content with a prompt, with increased max tokens
     prompt = "Explain how AI works in detail"
     response = gemini.generate_content(prompt)
