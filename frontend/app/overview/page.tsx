@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { DataCard } from '../components/data-card';
 import { NavCard } from '../components/nav-card';
 import { DataTable } from '../components/protocol-table';
+import { ThemeToggle } from '../components/theme-toggle';
 
 interface ProtocolData {
   name: string;
@@ -113,16 +114,19 @@ export default function Page() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className='flex h-16 shrink-0 items-center gap-2 border-b px-4'>
-          <SidebarTrigger className='-ml-1' />
-          <Separator orientation='vertical' className='mr-2 h-4' />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className='hidden md:block'>
-                Overview
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+        <header className='flex h-16 shrink-0 items-center justify-between border-b px-4'>
+          <div className='flex items-center gap-2'>
+            <SidebarTrigger className='-ml-1' />
+            <Separator orientation='vertical' className='mr-2 h-4' />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className='hidden md:block'>
+                  Overview
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+          <ThemeToggle />
         </header>
         <div className='flex flex-1 flex-col gap-4 p-4'>
           {analysisInfo && analysisInfo.originalFilename && (
