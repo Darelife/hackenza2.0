@@ -61,6 +61,7 @@ export default function PcapngUploader() {
   };
 
   const handleSubmit = async () => {
+    console.log("file", file);
     if (!file || !fileInputRef.current?.files?.[0]) return;
     
     setIsSubmitting(true);
@@ -69,9 +70,11 @@ export default function PcapngUploader() {
       const formData = new FormData();
       // Append the file with the key that backend expects
       formData.append('pcap_file', fileInputRef.current.files[0]);
+      console.log("formData", formData);
 
       // saving the formdata in the local storage
       localStorage.setItem('formData', JSON.stringify(formData));
+      console.log("formData", formData);
       
       // const response = await fetch('/api/upload', {
       //   method: 'POST',
