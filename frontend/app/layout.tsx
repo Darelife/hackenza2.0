@@ -13,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang='en' suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} vsc-initialized`}>
         <ThemeProvider
           attribute='class'
           defaultTheme='system'
