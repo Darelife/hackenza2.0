@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { AlertCircle, File, Loader2, Upload, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { ThemeToggle } from './theme-toggle';
 
 // Define API base URL
 const API_BASE_URL = 'http://localhost:8000';
@@ -169,122 +170,132 @@ export default function PcapngUploader() {
   };
 
   return (
-    <div className='w-full max-w-3xl mx-auto p-6 space-y-6'>
-      <h1 className='text-2xl font-bold text-center mb-6'>
-        Network Packet Analyzer
-      </h1>
-      <p className='text-center text-muted-foreground mb-8'>
-        Upload a PCAPNG file to analyze network traffic patterns and protocols
-      </p>
+    <div className='relative w-full max-w-3xl mx-auto p-6'>
+      {/* Position the theme toggle in the top-right corner */}
+      <div className='absolute right-6 top-6'>
+        <ThemeToggle />
+      </div>
 
-      {error && (
-        <Alert variant='destructive'>
-          <AlertCircle className='h-4 w-4' />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      <div className='mt-4 space-y-6'>
+        <h1 className='text-2xl font-bold text-center pt-2'>
+          Network Packet Analyzer
+        </h1>
 
-      {!file ? (
-        <div
-          className={cn(
-            'border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors',
-            isDragging
-              ? 'border-primary bg-primary/5'
-              : 'border-muted-foreground/25 hover:border-primary/50',
-          )}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={triggerFileInput}
-        >
-          <input
-            type='file'
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept='.pcapng'
-            className='hidden'
-          />
-          <div className='flex flex-col items-center gap-4'>
-            <div className='p-3 rounded-full bg-primary/10'>
-              <Upload className='h-6 w-6 text-primary' />
-            </div>
-            <div>
-              <p className='text-lg font-medium'>
-                Drag and drop your .pcapng file here
-              </p>
-              <p className='text-sm text-muted-foreground mt-1'>
-                or click to browse (.pcapng files only)
-              </p>
-            </div>
-            <Button variant='outline' className='mt-2'>
-              Select File
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className='space-y-4'>
-          <div className='w-full p-6 border rounded-lg bg-muted/30'>
-            <div className='flex items-center gap-4'>
+        <p className='text-center text-muted-foreground mb-6'>
+          Upload a PCAPNG file to analyze network traffic patterns and protocols
+        </p>
+
+        {error && (
+          <Alert variant='destructive'>
+            <AlertCircle className='h-4 w-4' />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {!file ? (
+          <div
+            className={cn(
+              'border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors',
+              isDragging
+                ? 'border-primary bg-primary/5'
+                : 'border-muted-foreground/25 hover:border-primary/50',
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={triggerFileInput}
+          >
+            <input
+              type='file'
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept='.pcapng'
+              className='hidden'
+            />
+            <div className='flex flex-col items-center gap-4'>
               <div className='p-3 rounded-full bg-primary/10'>
-                <File className='h-6 w-6 text-primary' />
+                <Upload className='h-6 w-6 text-primary' />
               </div>
-              <div className='flex-1'>
-                <p className='font-medium'>File ready to upload</p>
-                <p className='text-sm text-muted-foreground'>
-                  {file.name}
-                  {file.size
-                    ? ` (${(file.size / 1024 / 1024).toFixed(2)} MB)`
-                    : ''}
+              <div>
+                <p className='text-lg font-medium'>
+                  Drag and drop your .pcapng file here
+                </p>
+                <p className='text-sm text-muted-foreground mt-1'>
+                  or click to browse (.pcapng files only)
                 </p>
               </div>
-              {!isSubmitting && !isAnalyzing && (
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  onClick={resetFile}
-                  className='h-8 w-8'
-                >
-                  <X className='h-4 w-4' />
-                </Button>
+              <Button variant='outline' className='mt-2'>
+                Select File
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className='space-y-4'>
+            <div className='w-full p-6 border rounded-lg bg-muted/30'>
+              <div className='flex items-center gap-4'>
+                <div className='p-3 rounded-full bg-primary/10'>
+                  <File className='h-6 w-6 text-primary' />
+                </div>
+                <div className='flex-1'>
+                  <p className='font-medium'>File ready to upload</p>
+                  <p className='text-sm text-muted-foreground'>
+                    {file.name}
+                    {file.size
+                      ? ` (${(file.size / 1024 / 1024).toFixed(2)} MB)`
+                      : ''}
+                  </p>
+                </div>
+                {!isSubmitting && !isAnalyzing && (
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    onClick={resetFile}
+                    className='h-8 w-8'
+                  >
+                    <X className='h-4 w-4' />
+                  </Button>
+                )}
+              </div>
+
+              {(isSubmitting || isAnalyzing) && (
+                <div className='mt-4 space-y-2'>
+                  <div className='w-full bg-secondary rounded-full h-2.5'>
+                    <div
+                      className='bg-primary h-2.5 rounded-full'
+                      style={{
+                        width: isAnalyzing ? '100%' : `${uploadProgress}%`,
+                      }}
+                    ></div>
+                  </div>
+                  <p className='text-xs text-right text-muted-foreground'>
+                    {isAnalyzing
+                      ? 'Processing file...'
+                      : `${uploadProgress}% uploaded`}
+                  </p>
+                </div>
               )}
             </div>
 
-            {(isSubmitting || isAnalyzing) && (
-              <div className='mt-4 space-y-2'>
-                <div className='w-full bg-secondary rounded-full h-2.5'>
-                  <div
-                    className='bg-primary h-2.5 rounded-full'
-                    style={{
-                      width: isAnalyzing ? '100%' : `${uploadProgress}%`,
-                    }}
-                  ></div>
-                </div>
-                <p className='text-xs text-right text-muted-foreground'>
-                  {isAnalyzing
-                    ? 'Processing file...'
-                    : `${uploadProgress}% uploaded`}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className='flex justify-end gap-2'>
-            {!isSubmitting && !isAnalyzing && (
-              <Button variant='outline' onClick={triggerFileInput}>
-                Change File
+            <div className='flex justify-end gap-2'>
+              {!isSubmitting && !isAnalyzing && (
+                <Button variant='outline' onClick={triggerFileInput}>
+                  Change File
+                </Button>
+              )}
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting || isAnalyzing}
+                className='bg-blue-600 hover:bg-blue-700 text-white'
+              >
+                {isAnalyzing && (
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                )}
+                {getButtonText()}
               </Button>
-            )}
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || isAnalyzing}
-              className='bg-blue-600 hover:bg-blue-700 text-white'
-            >
-              {isAnalyzing && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-              {getButtonText()}
-            </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

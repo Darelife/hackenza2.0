@@ -6,6 +6,7 @@ import * as React from 'react';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -89,6 +90,11 @@ export function AppSidebar({
           </SidebarGroup>
         ))}
       </SidebarContent>
+      <SidebarFooter className='p-4 border-t'>
+        <div className='text-xs text-muted-foreground text-center'>
+          Packet Analysis Tool
+        </div>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
